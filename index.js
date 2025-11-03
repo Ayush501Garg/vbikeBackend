@@ -14,8 +14,9 @@ const productRoutes = require('./routes/productRoutes');
 const wishlistProductRoutes = require("./routes/wishlistRoutes");
 const cartRoutes = require("./routes/cartRoutes");
 const addressRoutes = require('./routes/addressRoutes');
-const orderRoutes = require('./routes/orderRoutes');
 
+const orderRoutes = require("./routes/orderRoutes");
+const paymentRoutes = require("./routes/paymentRoutes");
 
 
 // Import socket module
@@ -100,7 +101,8 @@ app.use('/api/products', productRoutes);
 app.use("/api/wishlist",wishlistProductRoutes)
 app.use("/api/cart", cartRoutes);
 app.use('/api/address', addressRoutes);
-app.use('/api/orders', orderRoutes);
+app.use("/api/orders", orderRoutes);
+app.use("/api/payments", paymentRoutes);
 
 
 // Start server
