@@ -181,6 +181,10 @@ exports.login = async (req, res) => {
   try {
     const { email, password, role } = req.body;
 
+    // Default role if not passed
+    role = role || "user";
+
+
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(400).json({
@@ -278,7 +282,7 @@ exports.getAllUsers = async (req, res) => {
     return res.status(200).json({
       status: "success",
       code: 200,
-      message: `Users fetched successfully for role: ${role}`,
+      message: `${role} fetched successfully`,
       count: users.length,
       data: users,
     });
