@@ -57,6 +57,7 @@ exports.signup = async (req, res) => {
       status: "success",
       code: 201,
       message: "OTP sent to email. Please verify.",
+      otp:otp,
       data: { email: tempUser.email },
     });
   } catch (err) {
