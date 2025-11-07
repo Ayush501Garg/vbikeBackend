@@ -7,7 +7,7 @@ dotenv.config();
 
 
 // Import routes
-const authRoutes = require('./routes/addressRoutes');
+const authRoutes = require('./routes/authRoutes');
 const bikeTypeRoutes = require('./routes/bikeTypeRoutes');
 const bikeModelRoutes = require('./routes/bikeModelRoutes');
 const bikeRoutes = require('./routes/bikeRoutes');
