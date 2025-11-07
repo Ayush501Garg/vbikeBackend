@@ -179,7 +179,7 @@ exports.resendOTP = async (req, res) => {
    ========================================================== */
 exports.login = async (req, res) => {
   try {
-    const { email, password, role } = req.body;
+    let { email, password, role } = req.body;
 
     // Default role if not passed
     role = role || "user";
