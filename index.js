@@ -3,9 +3,11 @@ const dotenv = require('dotenv');
 const cors = require('cors');
 const http = require('http');
 const connectDB = require('./config/db');
+dotenv.config();
+
 
 // Import routes
-const authRoutes = require('./routes/authRoutes');
+const authRoutes = require('./routes/addressRoutes');
 const bikeTypeRoutes = require('./routes/bikeTypeRoutes');
 const bikeModelRoutes = require('./routes/bikeModelRoutes');
 const bikeRoutes = require('./routes/bikeRoutes');
@@ -23,7 +25,6 @@ const paymentRoutes = require("./routes/paymentRoutes");
 const { initSocket, sendToUser } = require('./socket');
 const BikeRegister = require("./models/bikeRegisterModel"); // adjust path
 
-dotenv.config();
 
 const app = express();
 app.use(cors({ origin: '*', credentials: false }));

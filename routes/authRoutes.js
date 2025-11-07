@@ -1,8 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const userController = require("../controllers/userController");
-// const { verifyToken } = require("../middleware/authMiddleware"); // optional middleware if using token auth
-
+const userController = require("../controllers/authController");
 // ==========================
 // 🟢 AUTHENTICATION ROUTES
 // ==========================
