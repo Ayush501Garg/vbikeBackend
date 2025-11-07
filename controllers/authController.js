@@ -46,18 +46,32 @@ exports.signup = async (req, res) => {
       phone,
       password: hashedPassword,
       otp,
-      role,
       otpExpires,
-      role: role || "user", // default role = user
+      role: role || "user",
     });
 
-    await sendOTPEmail(email, otp);
+    // ✅ Try sending OTP email
+    try {
+      await sendOTPEmail(email, otp);
+    } catch (emailError) {
+      console.error("Failed to send OTP email:", emailError);
 
+      // Clean up the temp user if email sending fails
+      await TempUser.deleteOne({ email });
+
+      return res.status(400).json({
+        status: "error",
+        code: 400,
+        message: "Email incorrect or unable to send OTP. Please check your email address.",
+      });
+    }
+
+    // ✅ Success response
     return res.status(201).json({
       status: "success",
       code: 201,
       message: "OTP sent to email. Please verify.",
-      otp:otp,
+      otp: otp, // optional: remove in production
       data: { email: tempUser.email },
     });
   } catch (err) {
@@ -69,6 +83,7 @@ exports.signup = async (req, res) => {
     });
   }
 };
+
 
 /* ==========================================================
    🟣 VERIFY OTP — Move from TempUser to User
