@@ -46,6 +46,7 @@ exports.signup = async (req, res) => {
       phone,
       password: hashedPassword,
       otp,
+      role,
       otpExpires,
       role: role || "user", // default role = user
     });
