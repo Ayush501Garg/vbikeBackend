@@ -1,10 +1,33 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const auth = require('../controllers/authController');
+const userController = require("../controllers/userController");
+// const { verifyToken } = require("../middleware/authMiddleware"); // optional middleware if using token auth
 
-router.post('/signup', auth.signup);
-router.post('/verify-otp', auth.verifyOTP);
-router.post('/resend-otp', auth.resendOTP);
-router.post('/login', auth.login);
+// ==========================
+// 🟢 AUTHENTICATION ROUTES
+// ==========================
+router.post("/signup", userController.signup);
+router.post("/verify-otp", userController.verifyOTP);
+router.post("/resend-otp", userController.resendOTP);
+router.post("/login", userController.login);
+
+// ==========================
+// 🟡 USER CRUD ROUTES
+// ==========================
+
+// POST (role-based): Get all users by role
+router.post("/getAllUsers", userController.getAllUsers);
+
+// GET: Get single user by ID
+router.get("/users/:id", userController.getUserById);
+
+// PUT: Update user info
+router.put("/users/:id", userController.updateUser);
+
+// DELETE: Delete user (admin only)
+router.delete("/users/:id", userController.deleteUser);
+
+// PUT: Update user role (admin only)
+router.put("/users/:id/role", userController.updateUserRole);
 
 module.exports = router;
