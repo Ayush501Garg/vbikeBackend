@@ -181,9 +181,12 @@ exports.login = async (req, res) => {
   try {
     let { email, password, role } = req.body;
 
-    // Default role if not passed
-    role = role || "user";
+    // ✅ If frontend doesn’t send role, default it to "user"
+    if (!role) {
+      role = "user";
+    }
 
+    console.log("role",role);
 
     const user = await User.findOne({ email });
     if (!user) {
@@ -211,7 +214,7 @@ exports.login = async (req, res) => {
       });
     }
 
-    // Optional role validation
+    // ✅ Check role (if role mismatch, reject)
     if (role && user.role !== role) {
       return res.status(403).json({
         status: "error",
@@ -220,19 +223,20 @@ exports.login = async (req, res) => {
       });
     }
 
+    // ✅ Generate JWT token
     const token = generateToken(user._id);
     user.token = token;
     await user.save();
 
+    // ✅ Send role-based login message
+    let message = "User login successful";
+    if (user.role === "admin") message = "Admin login successful";
+    if (user.role === "vendor") message = "Vendor login successful";
+
     return res.status(200).json({
       status: "success",
       code: 200,
-      message:
-        user.role === "admin"
-          ? "Admin login successful"
-          : user.role === "vendor"
-          ? "Vendor login successful"
-          : "User login successful",
+      message,
       user: {
         userId: user._id,
         name: user.name,
@@ -251,7 +255,9 @@ exports.login = async (req, res) => {
     });
   }
 };
-// commit
+
+
+   // commit
 /* ==========================================================
    ⚙️ USER CRUD OPERATIONS (Role-Based)
    ========================================================== */
