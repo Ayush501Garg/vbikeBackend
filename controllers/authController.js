@@ -52,7 +52,15 @@ exports.signup = async (req, res) => {
 
     // ✅ Try sending OTP email
     try {
-      await sendOTPEmail(email, otp);
+      await sendOTPEmail(email, otp);// ✅ Success response
+    return res.status(201).json({
+      status: "success",
+      code: 201,
+      message: "OTP sent to email. Please verify.",
+      otp: otp, // optional: remove in production
+      data: { email: tempUser.email },
+    });
+
     } catch (emailError) {
       console.error("Failed to send OTP email:", emailError);
 
@@ -66,14 +74,7 @@ exports.signup = async (req, res) => {
       });
     }
 
-    // ✅ Success response
-    return res.status(201).json({
-      status: "success",
-      code: 201,
-      message: "OTP sent to email. Please verify.",
-      otp: otp, // optional: remove in production
-      data: { email: tempUser.email },
-    });
+    
   } catch (err) {
     console.error("Signup Error:", err);
     return res.status(500).json({
