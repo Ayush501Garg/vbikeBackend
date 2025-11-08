@@ -17,26 +17,37 @@ const cityCoordinates = {
   "Jaipur": { lat: 26.9124, lng: 75.7873 }
 };
 
-// 📍 Create new vendor
+// 🏗️ Create Vendor
 exports.createVendor = async (req, res) => {
   try {
-    const { name, address_line, city, state, postal_code, country, phone, email, opening_hours, available_products } = req.body;
+    const {
+      name,
+      address_line,
+      city,
+      state,
+      postal_code,
+      country,
+      phone,
+      email,
+      opening_hours,
+      available_products,
+      rating
+    } = req.body;
 
-    // Generate full address string
     const fullAddress = `${address_line}, ${city}, ${state}, ${postal_code}, ${country}`;
     let coordinates = await geocodeAddress(fullAddress);
 
-    // Fallback if geocoding fails
+    // fallback
     if (!coordinates) {
       if (cityCoordinates[city]) {
         coordinates = cityCoordinates[city];
-        console.log('📍 Using fallback coordinates for city:', city);
       } else {
-        return res.status(400).json({ status: 'error', message: 'Unable to get location from address' });
+        return res
+          .status(400)
+          .json({ status: "error", message: "Unable to get location from address" });
       }
     }
 
-    // Convert array → { lat, lng }
     const locationObj = Array.isArray(coordinates)
       ? { lat: coordinates[1], lng: coordinates[0] }
       : coordinates;
@@ -52,19 +63,26 @@ exports.createVendor = async (req, res) => {
       email,
       opening_hours,
       available_products,
+      rating: Number(rating) || 0, // ✅ fix here
       location: locationObj
     });
 
     await vendor.save();
-    res.status(201).json({ status: 'success', message: 'Vendor created successfully', data: vendor });
 
+    res
+      .status(201)
+      .json({
+        status: "success",
+        message: "Vendor created successfully",
+        data: vendor
+      });
   } catch (err) {
-    console.error('❌ Error creating vendor:', err.message);
-    res.status(500).json({ status: 'error', message: err.message });
+    res.status(500).json({ status: "error", message: err.message });
   }
 };
 
-// 📋 Get all vendors
+
+// 📋 Get All Vendors
 exports.getVendors = async (req, res) => {
   try {
     const vendors = await Vendor.find().populate('available_products');
@@ -74,7 +92,55 @@ exports.getVendors = async (req, res) => {
   }
 };
 
-// 📍 Get nearby vendors (manual distance calculation since no GeoJSON index)
+// 🔍 Get Single Vendor
+exports.getVendorById = async (req, res) => {
+  try {
+    const vendor = await Vendor.findById(req.params.id).populate('available_products');
+    if (!vendor) return res.status(404).json({ status: 'error', message: 'Vendor not found' });
+    res.json({ status: 'success', data: vendor });
+  } catch (err) {
+    res.status(500).json({ status: 'error', message: err.message });
+  }
+};
+
+// ✏️ Update Vendor
+exports.updateVendor = async (req, res) => {
+  try {
+    const { address_line, city, state, postal_code, country } = req.body;
+    let coordinates;
+
+    // update location if address changes
+    if (address_line || city || state || postal_code || country) {
+      const fullAddress = `${address_line || ''}, ${city || ''}, ${state || ''}, ${postal_code || ''}, ${country || ''}`;
+      coordinates = await geocodeAddress(fullAddress);
+      if (!coordinates && cityCoordinates[city]) coordinates = cityCoordinates[city];
+      if (coordinates) {
+        req.body.location = Array.isArray(coordinates)
+          ? { lat: coordinates[1], lng: coordinates[0] }
+          : coordinates;
+      }
+    }
+
+    const vendor = await Vendor.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    if (!vendor) return res.status(404).json({ status: 'error', message: 'Vendor not found' });
+    res.json({ status: 'success', message: 'Vendor updated successfully', data: vendor });
+  } catch (err) {
+    res.status(500).json({ status: 'error', message: err.message });
+  }
+};
+
+// 🗑️ Delete Vendor
+exports.deleteVendor = async (req, res) => {
+  try {
+    const vendor = await Vendor.findByIdAndDelete(req.params.id);
+    if (!vendor) return res.status(404).json({ status: 'error', message: 'Vendor not found' });
+    res.json({ status: 'success', message: 'Vendor deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ status: 'error', message: err.message });
+  }
+};
+
+// 📍 Get Nearby Vendors
 exports.getNearbyVendors = async (req, res) => {
   try {
     const { lat, lng, radius = 10, product_id } = req.query;
@@ -84,10 +150,8 @@ exports.getNearbyVendors = async (req, res) => {
     if (!userLat || !userLng)
       return res.status(400).json({ status: 'error', message: 'Latitude and longitude are required' });
 
-    // Get all vendors that have the product
-    let vendors = await Vendor.find({ available_products: product_id });
+    let vendors = await Vendor.find(product_id ? { available_products: product_id } : {});
 
-    // Filter vendors within radius (in km)
     vendors = vendors.filter(vendor => {
       if (!vendor.location?.lat || !vendor.location?.lng) return false;
       const distance = getDistanceFromLatLonInKm(userLat, userLng, vendor.location.lat, vendor.location.lng);
@@ -96,14 +160,13 @@ exports.getNearbyVendors = async (req, res) => {
 
     res.json({ status: 'success', count: vendors.length, data: vendors });
   } catch (err) {
-    console.error('❌ Error finding nearby vendors:', err.message);
     res.status(500).json({ status: 'error', message: err.message });
   }
 };
 
-// 🧮 Haversine formula for distance (in KM)
+// 🔢 Haversine Formula
 function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
-  const R = 6371; // Earth radius in KM
+  const R = 6371;
   const dLat = deg2rad(lat2 - lat1);
   const dLon = deg2rad(lon2 - lon1);
   const a =
@@ -113,7 +176,6 @@ function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 }
-
 function deg2rad(deg) {
   return deg * (Math.PI / 180);
 }
