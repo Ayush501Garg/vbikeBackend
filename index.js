@@ -31,19 +31,7 @@ const BikeRegister = require("./models/bikeRegisterModel"); // adjust path
 
 
 const app = express();
-app.use(cors({
-  origin: (origin, callback) => {
-    const allowedOrigins = ['http://127.0.0.1:8000'];
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(null, true); // still allow all others
-    }
-  },
-  credentials: false
-}));
-cls
-
+app.use(cors({ origin: '*', credentials: false }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(express.static('uploads'));
