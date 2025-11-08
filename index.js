@@ -1,6 +1,5 @@
 const express = require('express');
 const dotenv = require('dotenv');
-const cors = require('cors');
 const http = require('http');
 const connectDB = require('./config/db');
 dotenv.config();
@@ -31,11 +30,25 @@ const BikeRegister = require("./models/bikeRegisterModel"); // adjust path
 
 
 const app = express();
+
+const cors = require('cors');
+
 app.use(cors({
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'device-id'],
 }));
+
+// Handle preflight requests manually (safe for Express 5)
+app.use((req, res, next) => {
+  if (req.method === 'OPTIONS') {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,PATCH,OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type,Authorization,device-id');
+    return res.sendStatus(200);
+  }
+  next();
+});
 
 
 app.use(express.json());
