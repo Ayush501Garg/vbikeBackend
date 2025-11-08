@@ -4,7 +4,7 @@ const addressSchema = new mongoose.Schema(
   {
     user_id: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     full_name: { type: String, required: true, trim: true },
-    email: { type: String, required: true, trim: true, match: [/^\S+@\S+\.\S+$/, 'Please enter a valid email'] },
+    email: { type: String, required: true, trim: true },
     phone: { type: String, required: true, trim: true },
     address_line: { type: String, required: true, trim: true },
     city: { type: String, required: true, trim: true },
@@ -12,11 +12,12 @@ const addressSchema = new mongoose.Schema(
     postal_code: { type: String, required: true, trim: true },
     country: { type: String, required: true, default: "India" },
     is_default: { type: Boolean, default: false },
-    location: { type: { type: String, default: 'Point' }, coordinates: [Number] } // [lng, lat]
+    location: {
+      lat: { type: Number },
+      lng: { type: Number }
+    }
   },
   { timestamps: true }
 );
-
-addressSchema.index({ location: '2dsphere' });
 
 module.exports = mongoose.model("Address", addressSchema);
