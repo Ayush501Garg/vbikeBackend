@@ -143,26 +143,67 @@ exports.deleteVendor = async (req, res) => {
 // 📍 Get Nearby Vendors
 exports.getNearbyVendors = async (req, res) => {
   try {
-    const { lat, lng, radius = 10, product_id } = req.query;
+    const { lat, lng, radius = 10 } = req.query;
+
     const userLat = parseFloat(lat);
     const userLng = parseFloat(lng);
 
-    if (!userLat || !userLng)
-      return res.status(400).json({ status: 'error', message: 'Latitude and longitude are required' });
+    // ✅ Validate coordinates
+    if (!userLat || !userLng) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Latitude and longitude are required'
+      });
+    }
 
-    let vendors = await Vendor.find(product_id ? { available_products: product_id } : {});
+    // ✅ Fetch all vendors
+    let vendors = await Vendor.find();
 
+    // ✅ Filter vendors within radius (km)
     vendors = vendors.filter(vendor => {
       if (!vendor.location?.lat || !vendor.location?.lng) return false;
-      const distance = getDistanceFromLatLonInKm(userLat, userLng, vendor.location.lat, vendor.location.lng);
+      const distance = getDistanceFromLatLonInKm(
+        userLat,
+        userLng,
+        vendor.location.lat,
+        vendor.location.lng
+      );
       return distance <= radius;
     });
 
-    res.json({ status: 'success', count: vendors.length, data: vendors });
+    // ✅ Return nearby vendors
+    res.json({
+      status: 'success',
+      message: `Found ${vendors.length} vendors within ${radius} km`,
+      count: vendors.length,
+      data: vendors
+    });
   } catch (err) {
-    res.status(500).json({ status: 'error', message: err.message });
+    console.error('❌ Error in getNearbyVendors:', err);
+    res.status(500).json({
+      status: 'error',
+      message: err.message
+    });
   }
 };
+
+// 🧮 Haversine formula (in KM)
+function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = deg2rad(lat2 - lat1);
+  const dLon = deg2rad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+function deg2rad(deg) {
+  return deg * (Math.PI / 180);
+}
+
 
 // 🔢 Haversine Formula
 function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
