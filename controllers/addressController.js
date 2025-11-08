@@ -2,6 +2,12 @@ const Address = require('../models/addressModel');
 const User = require('../models/User');
 const geocodeAddress = require('../utils/geocode');
 
+const cityCoordinates = {
+  "New Delhi": [77.2167, 28.6448],
+  "Mumbai": [72.8777, 19.0760],
+  "Bangalore": [77.5946, 12.9716]
+};
+
 exports.createAddress = async (req, res) => {
   try {
     const { user_id, full_name, email, phone, address_line, city, state, postal_code, country, is_default } = req.body;
@@ -9,25 +15,25 @@ exports.createAddress = async (req, res) => {
     const user = await User.findById(user_id);
     if (!user) return res.status(404).json({ status: 'error', message: 'User not found' });
 
-    // Geocode address
+    // Try to geocode full address
     const fullAddress = `${address_line}, ${city}, ${state}, ${postal_code}, ${country}`;
-    const coordinates = await geocodeAddress(fullAddress);
+    let coordinates = await geocodeAddress(fullAddress);
 
-    if (!coordinates) return res.status(400).json({ status: 'error', message: 'Unable to get location from address' });
+    // Fallback: use city coordinates
+    if (!coordinates) {
+      if (cityCoordinates[city]) {
+        coordinates = cityCoordinates[city];
+        console.log('Using fallback coordinates for city:', city);
+      } else {
+        return res.status(400).json({ status: 'error', message: 'Unable to get location from address' });
+      }
+    }
 
-    // Unset previous default if needed
     if (is_default) await Address.updateMany({ user_id }, { is_default: false });
 
     const address = new Address({
-      user_id,
-      full_name,
-      email,
-      phone,
-      address_line,
-      city,
-      state,
-      postal_code,
-      country,
+      user_id, full_name, email, phone,
+      address_line, city, state, postal_code, country,
       is_default: is_default || false,
       location: { type: 'Point', coordinates }
     });
@@ -40,6 +46,7 @@ exports.createAddress = async (req, res) => {
     res.status(500).json({ status: 'error', message: err.message });
   }
 };
+
 
 exports.getAddresses = async (req, res) => {
   try {
