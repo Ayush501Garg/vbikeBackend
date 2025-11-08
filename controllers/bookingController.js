@@ -6,7 +6,7 @@ const Vendor = require('../models/vendor');
 exports.createBooking = async (req, res) => {
   try {
     const { user_id, product_id, vendor_id, shipping_address_id, pickup_date } = req.body;
-
+    
     // 🧾 Validate required fields
     if (!user_id || !product_id || !vendor_id || !shipping_address_id) {
       return res.status(400).json({
