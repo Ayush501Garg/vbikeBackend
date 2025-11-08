@@ -37,6 +37,7 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'device-id'],
 }));
 
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(express.static('uploads'));
