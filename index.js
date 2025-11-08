@@ -16,6 +16,10 @@ const productRoutes = require('./routes/productRoutes');
 const wishlistProductRoutes = require("./routes/wishlistRoutes");
 const cartRoutes = require("./routes/cartRoutes");
 const addressRoutes = require('./routes/addressRoutes');
+const vendorRoutes = require('./routes/vendorRoutes');
+const bookingRoutes = require('./routes/bookingRoutes');
+
+
 
 const orderRoutes = require("./routes/orderRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
@@ -100,10 +104,15 @@ app.use("/api/bikes", bikeRoutes);
 app.use("/api/bike-register", bikeRegisterRoutes);
 app.use('/api/products', productRoutes);
 app.use("/api/wishlist",wishlistProductRoutes)
-app.use("/api/cart", cartRoutes);
 app.use('/api/address', addressRoutes);
+app.use('/api/vendors', vendorRoutes);
+app.use('/api/bookings', bookingRoutes);
+
+// Skip
+app.use("/api/cart", cartRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/payments", paymentRoutes);
+
 
 
 // Start server

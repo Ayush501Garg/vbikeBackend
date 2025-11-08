@@ -1,10 +1,24 @@
 const Address = require('../models/addressModel');
 const User = require('../models/User');
+const geocodeAddress = require('../utils/geocode');
 
-// 📦 Add New Address
 exports.createAddress = async (req, res) => {
   try {
-    const {
+    const { user_id, full_name, email, phone, address_line, city, state, postal_code, country, is_default } = req.body;
+
+    const user = await User.findById(user_id);
+    if (!user) return res.status(404).json({ status: 'error', message: 'User not found' });
+
+    // Geocode address
+    const fullAddress = `${address_line}, ${city}, ${state}, ${postal_code}, ${country}`;
+    const coordinates = await geocodeAddress(fullAddress);
+
+    if (!coordinates) return res.status(400).json({ status: 'error', message: 'Unable to get location from address' });
+
+    // Unset previous default if needed
+    if (is_default) await Address.updateMany({ user_id }, { is_default: false });
+
+    const address = new Address({
       user_id,
       full_name,
       email,
@@ -14,140 +28,60 @@ exports.createAddress = async (req, res) => {
       state,
       postal_code,
       country,
-      is_default
-    } = req.body;
-
-    // 🧍‍♂️ Ensure user exists
-    const userExists = await User.findById(user_id);
-    if (!userExists) {
-      return res.status(404).json({
-        status: 'error',
-        code: 404,
-        message: 'User not found.'
-      });
-    }
-
-    // ✅ Unset previous default address if this one is default
-    if (is_default) {
-      await Address.updateMany({ user_id }, { $set: { is_default: false } });
-    }
-
-    // 🏠 Create new address
-    const address = new Address({
-      user_id,
-      full_name,
-      email,         // ✅ Added email field
-      phone,
-      address_line,
-      city,
-      state,
-      postal_code,
-      country,
-      is_default: is_default || false
+      is_default: is_default || false,
+      location: { type: 'Point', coordinates }
     });
 
-    const savedAddress = await address.save();
+    await address.save();
 
-    res.status(201).json({
-      status: 'success',
-      code: 201,
-      message: 'Address added successfully.',
-      data: savedAddress
-    });
+    res.status(201).json({ status: 'success', message: 'Address added successfully', data: address });
+
   } catch (err) {
-    console.error('❌ Error creating address:', err.message);
-    res.status(400).json({
-      status: 'error',
-      code: 400,
-      message: err.message
-    });
+    res.status(500).json({ status: 'error', message: err.message });
   }
 };
 
-// 📬 Get All Addresses for a User
 exports.getAddresses = async (req, res) => {
   try {
-    const addresses = await Address.find({ user_id: req.params.userId })
-      .select('-__v')
-      .sort({ createdAt: -1 });
-
-    res.json({
-      status: 'success',
-      code: 200,
-      message: 'Addresses retrieved successfully.',
-      data: addresses
-    });
+    const addresses = await Address.find({ user_id: req.params.userId }).sort({ createdAt: -1 });
+    res.json({ status: 'success', data: addresses });
   } catch (err) {
-    res.status(500).json({
-      status: 'error',
-      code: 500,
-      message: err.message
-    });
+    res.status(500).json({ status: 'error', message: err.message });
   }
 };
 
-// 🧾 Update Address
 exports.updateAddress = async (req, res) => {
   try {
     const { id } = req.params;
 
     // If updating to default, unset others
-    if (req.body.is_default === true) {
+    if (req.body.is_default) {
       const address = await Address.findById(id);
-      if (address) {
-        await Address.updateMany({ user_id: address.user_id }, { $set: { is_default: false } });
-      }
+      if (address) await Address.updateMany({ user_id: address.user_id }, { is_default: false });
     }
 
-    const updated = await Address.findByIdAndUpdate(id, req.body, { new: true }).select('-__v');
-
-    if (!updated) {
-      return res.status(404).json({
-        status: 'error',
-        code: 404,
-        message: 'Address not found.'
-      });
+    // If address changed, update location
+    let coordinates;
+    if (req.body.address_line || req.body.city || req.body.state || req.body.postal_code || req.body.country) {
+      const fullAddress = `${req.body.address_line || ''}, ${req.body.city || ''}, ${req.body.state || ''}, ${req.body.postal_code || ''}, ${req.body.country || ''}`;
+      coordinates = await geocodeAddress(fullAddress);
+      if (coordinates) req.body.location = { type: 'Point', coordinates };
     }
 
-    res.json({
-      status: 'success',
-      code: 200,
-      message: 'Address updated successfully.',
-      data: updated
-    });
+    const updated = await Address.findByIdAndUpdate(id, req.body, { new: true });
+    res.json({ status: 'success', data: updated });
+
   } catch (err) {
-    res.status(400).json({
-      status: 'error',
-      code: 400,
-      message: err.message
-    });
+    res.status(500).json({ status: 'error', message: err.message });
   }
 };
 
-// ❌ Delete Address
 exports.deleteAddress = async (req, res) => {
   try {
-    const { id } = req.params;
-    const deleted = await Address.findByIdAndDelete(id);
-
-    if (!deleted) {
-      return res.status(404).json({
-        status: 'error',
-        code: 404,
-        message: 'Address not found.'
-      });
-    }
-
-    res.json({
-      status: 'success',
-      code: 200,
-      message: 'Address deleted successfully.'
-    });
+    const deleted = await Address.findByIdAndDelete(req.params.id);
+    if (!deleted) return res.status(404).json({ status: 'error', message: 'Address not found' });
+    res.json({ status: 'success', message: 'Address deleted successfully' });
   } catch (err) {
-    res.status(500).json({
-      status: 'error',
-      code: 500,
-      message: err.message
-    });
+    res.status(500).json({ status: 'error', message: err.message });
   }
 };
