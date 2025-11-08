@@ -1,11 +1,13 @@
 const Booking = require('../models/booking');
 const Vendor = require('../models/vendor');
 
+
+
 exports.createBooking = async (req, res) => {
   try {
-    const { user_id, product_id, vendor_id, shipping_address_id } = req.body;
+    const { user_id, product_id, vendor_id, shipping_address_id, pickup_date } = req.body;
 
-    // 🧾 Validation
+    // 🧾 Validate required fields
     if (!user_id || !product_id || !vendor_id || !shipping_address_id) {
       return res.status(400).json({
         status: 'error',
@@ -13,20 +15,26 @@ exports.createBooking = async (req, res) => {
       });
     }
 
+    // 🏪 Find Vendor
     const vendor = await Vendor.findById(vendor_id);
     if (!vendor)
       return res.status(404).json({ status: 'error', message: 'Vendor not found' });
 
-    // ✅ Check if vendor has the product
+    // 🧩 Check product availability
     const isAvailable = vendor.available_products.some(
       p => p.toString() === product_id.toString()
     );
 
-    // 🎯 Set status and pickup date
+    // 📅 Handle user-specified or default date
+    let baseDate = pickup_date ? new Date(pickup_date) : new Date();
+    if (isNaN(baseDate.getTime())) baseDate = new Date(); // fallback if invalid date
+
+    // 🕒 Adjust date if product not available (+1 day)
+    const finalPickupDate = isAvailable
+      ? baseDate
+      : new Date(baseDate.getTime() + 24 * 60 * 60 * 1000);
+
     const status = isAvailable ? 'ready' : 'delayed';
-    const pickup_date = isAvailable
-      ? new Date()
-      : new Date(Date.now() + 3 * 24 * 60 * 60 * 1000); // +3 days
 
     // 🧱 Create booking
     const booking = new Booking({
@@ -35,13 +43,13 @@ exports.createBooking = async (req, res) => {
       vendor_id,
       shipping_address_id,
       status,
-      pickup_date
+      pickup_date: finalPickupDate
     });
 
     await booking.save();
 
-    // 🕒 Format readable date for response
-    const pickupDateStr = pickup_date.toLocaleString('en-IN', {
+    // 🕒 Format human-readable date
+    const formattedDate = finalPickupDate.toLocaleString('en-IN', {
       timeZone: 'Asia/Kolkata',
       weekday: 'long',
       year: 'numeric',
@@ -53,14 +61,14 @@ exports.createBooking = async (req, res) => {
 
     // 🧾 Build response message
     const message = isAvailable
-      ? `Booking confirmed! 🎉 You can take your bike on ${pickupDateStr}.`
-      : `Booking created but product is not currently available. Please visit again on ${pickupDateStr}.`;
+      ? `Booking confirmed! 🎉 You can take your bike on ${formattedDate}.`
+      : `Product not currently available. You can take your bike on ${formattedDate}.`;
 
-    // 🚀 Response
+    // 🚀 Final response
     res.status(201).json({
       status: 'success',
       message,
-      isAvailable, // ✅ Boolean flag for frontend
+      isAvailable,
       data: booking
     });
 
@@ -69,6 +77,7 @@ exports.createBooking = async (req, res) => {
     res.status(500).json({ status: 'error', message: err.message });
   }
 };
+
 
 
 // ✅ Get All Bookings
