@@ -1,37 +1,75 @@
 const Booking = require('../models/booking');
 const Vendor = require('../models/vendor');
 
-// ✅ Create Booking
 exports.createBooking = async (req, res) => {
   try {
-    const { user_id, product_id, vendor_id, shipping_address_id, pickup_date } = req.body;
+    const { user_id, product_id, vendor_id, shipping_address_id } = req.body;
+
+    // 🧾 Validation
+    if (!user_id || !product_id || !vendor_id || !shipping_address_id) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'user_id, product_id, vendor_id, and shipping_address_id are required'
+      });
+    }
 
     const vendor = await Vendor.findById(vendor_id);
-    if (!vendor) {
+    if (!vendor)
       return res.status(404).json({ status: 'error', message: 'Vendor not found' });
-    }
 
-    // Optional: verify product availability
-    const isAvailable = vendor.available_products.some(p => p.toString() === product_id);
-    if (!isAvailable) {
-      return res.status(400).json({ status: 'error', message: 'Product not available at this vendor' });
-    }
+    // ✅ Check if vendor has the product
+    const isAvailable = vendor.available_products.some(
+      p => p.toString() === product_id.toString()
+    );
 
+    // 🎯 Set status and pickup date
+    const status = isAvailable ? 'ready' : 'delayed';
+    const pickup_date = isAvailable
+      ? new Date()
+      : new Date(Date.now() + 3 * 24 * 60 * 60 * 1000); // +3 days
+
+    // 🧱 Create booking
     const booking = new Booking({
       user_id,
       product_id,
       vendor_id,
       shipping_address_id,
-      status: 'ready',
-      pickup_date: pickup_date || new Date()
+      status,
+      pickup_date
     });
 
     await booking.save();
-    res.status(201).json({ status: 'success', message: 'Booking created successfully', data: booking });
+
+    // 🕒 Format readable date for response
+    const pickupDateStr = pickup_date.toLocaleString('en-IN', {
+      timeZone: 'Asia/Kolkata',
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    // 🧾 Build response message
+    const message = isAvailable
+      ? `Booking confirmed! 🎉 You can take your bike on ${pickupDateStr}.`
+      : `Booking created but product is not currently available. Please visit again on ${pickupDateStr}.`;
+
+    // 🚀 Response
+    res.status(201).json({
+      status: 'success',
+      message,
+      isAvailable, // ✅ Boolean flag for frontend
+      data: booking
+    });
+
   } catch (err) {
+    console.error('❌ Error creating booking:', err.message);
     res.status(500).json({ status: 'error', message: err.message });
   }
 };
+
 
 // ✅ Get All Bookings
 exports.getAllBookings = async (req, res) => {
