@@ -1,12 +1,6 @@
 const Booking = require('../models/booking');
 const Vendor = require('../models/vendor');
 
-
-
-const Booking = require('../models/booking');
-const Vendor = require('../models/vendor');
-const mongoose = require('mongoose');
-
 exports.createBooking = async (req, res) => {
   try {
     const { user_id, product_id, vendor_id, shipping_address_id, pickup_date } = req.body;
@@ -61,9 +55,10 @@ exports.createBooking = async (req, res) => {
     );
 
     // Adjust pickup date if product not available (+1 day)
-    const finalPickupDate = isAvailable
-      ? baseDate
-      : new Date(baseDate.getTime() + 24 * 60 * 60 * 1000);
+    const delayed = !isAvailable;
+    const finalPickupDate = delayed
+      ? new Date(baseDate.getTime() + 24 * 60 * 60 * 1000)
+      : baseDate;
 
     const status = isAvailable ? 'ready' : 'delayed';
 
@@ -94,9 +89,9 @@ exports.createBooking = async (req, res) => {
       minute: '2-digit'
     });
 
-    const message = isAvailable
-      ? `Booking confirmed! 🎉 You can take your bike on ${formattedDate}.`
-      : `Product not currently available. You can take your bike on ${formattedDate}.`;
+    const message = delayed
+      ? `Product not currently available. Your bike can be picked up on ${formattedDate}.`
+      : `Booking confirmed! 🎉 You can take your bike on ${formattedDate}.`;
 
     // -------------------------------
     // 8️⃣ Send response
@@ -105,6 +100,7 @@ exports.createBooking = async (req, res) => {
       status: 'success',
       message,
       isAvailable,
+      delayed,
       data: booking
     });
   } catch (err) {
