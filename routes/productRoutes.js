@@ -31,6 +31,9 @@ const storage = multer.diskStorage({
 });
 
 
+
+
+
 const upload = multer({ storage });
 
 // Routes
@@ -39,5 +42,7 @@ router.get('/', productController.getProducts);
 router.get('/:id', productController.getProduct);
 router.put('/:id', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'thumbnails', maxCount: 5 }]), productController.updateProduct);
 router.delete('/:id', productController.deleteProduct);
+
+
 
 module.exports = router;
