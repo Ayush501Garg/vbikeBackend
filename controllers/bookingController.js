@@ -3,11 +3,17 @@ const Vendor = require('../models/vendor');
 
 
 
+const Booking = require('../models/booking');
+const Vendor = require('../models/vendor');
+const mongoose = require('mongoose');
+
 exports.createBooking = async (req, res) => {
   try {
     const { user_id, product_id, vendor_id, shipping_address_id, pickup_date } = req.body;
-    
-    // 🧾 Validate required fields
+
+    // -------------------------------
+    // 1️⃣ Validate required fields
+    // -------------------------------
     if (!user_id || !product_id || !vendor_id || !shipping_address_id) {
       return res.status(400).json({
         status: 'error',
@@ -15,28 +21,55 @@ exports.createBooking = async (req, res) => {
       });
     }
 
-    // 🏪 Find Vendor
-    const vendor = await Vendor.findById(vendor_id);
-    if (!vendor)
-      return res.status(404).json({ status: 'error', message: 'Vendor not found' });
+    // -------------------------------
+    // 2️⃣ Validate MongoDB ObjectId format
+    // -------------------------------
+    const ids = { user_id, product_id, vendor_id, shipping_address_id };
+    for (const [key, value] of Object.entries(ids)) {
+      if (!mongoose.Types.ObjectId.isValid(value)) {
+        return res.status(400).json({
+          status: 'error',
+          message: `${key} is not a valid ID`
+        });
+      }
+    }
 
-    // 🧩 Check product availability
+    // -------------------------------
+    // 3️⃣ Validate pickup_date if provided
+    // -------------------------------
+    let baseDate = pickup_date ? new Date(pickup_date) : new Date();
+    if (isNaN(baseDate.getTime())) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'pickup_date is invalid. Use ISO format e.g., 2025-11-12T10:00:00Z'
+      });
+    }
+
+    // -------------------------------
+    // 4️⃣ Check Vendor existence
+    // -------------------------------
+    const vendor = await Vendor.findById(vendor_id);
+    if (!vendor) {
+      return res.status(404).json({ status: 'error', message: 'Vendor not found' });
+    }
+
+    // -------------------------------
+    // 5️⃣ Check product availability
+    // -------------------------------
     const isAvailable = vendor.available_products.some(
       p => p.toString() === product_id.toString()
     );
 
-    // 📅 Handle user-specified or default date
-    let baseDate = pickup_date ? new Date(pickup_date) : new Date();
-    if (isNaN(baseDate.getTime())) baseDate = new Date(); // fallback if invalid date
-
-    // 🕒 Adjust date if product not available (+1 day)
+    // Adjust pickup date if product not available (+1 day)
     const finalPickupDate = isAvailable
       ? baseDate
       : new Date(baseDate.getTime() + 24 * 60 * 60 * 1000);
 
     const status = isAvailable ? 'ready' : 'delayed';
 
-    // 🧱 Create booking
+    // -------------------------------
+    // 6️⃣ Create booking
+    // -------------------------------
     const booking = new Booking({
       user_id,
       product_id,
@@ -48,7 +81,9 @@ exports.createBooking = async (req, res) => {
 
     await booking.save();
 
-    // 🕒 Format human-readable date
+    // -------------------------------
+    // 7️⃣ Format pickup date for response
+    // -------------------------------
     const formattedDate = finalPickupDate.toLocaleString('en-IN', {
       timeZone: 'Asia/Kolkata',
       weekday: 'long',
@@ -59,24 +94,25 @@ exports.createBooking = async (req, res) => {
       minute: '2-digit'
     });
 
-    // 🧾 Build response message
     const message = isAvailable
       ? `Booking confirmed! 🎉 You can take your bike on ${formattedDate}.`
       : `Product not currently available. You can take your bike on ${formattedDate}.`;
 
-    // 🚀 Final response
+    // -------------------------------
+    // 8️⃣ Send response
+    // -------------------------------
     res.status(201).json({
       status: 'success',
       message,
       isAvailable,
       data: booking
     });
-
   } catch (err) {
     console.error('❌ Error creating booking:', err.message);
-    res.status(500).json({ status: 'error', message: err.message });
+    res.status(500).json({ status: 'error', message: 'Internal server error' });
   }
 };
+
 
 
 
