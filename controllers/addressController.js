@@ -76,6 +76,36 @@ exports.createAddress = async (req, res) => {
   }
 };
 
+
+// 📬 Get single address for a user
+exports.getAddressByUser = async (req, res) => {
+  try {
+    const userId = req.params.userId;
+
+    // Find one address for this user (most recent one)
+    const address = await Address.findOne({ user_id: userId })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    if (!address) {
+      return res.json({
+        status: 'success',
+        message: 'No address found for this user',
+        data: null
+      });
+    }
+
+    res.json({
+      status: 'success',
+      data: address
+    });
+  } catch (err) {
+    console.error('❌ Error fetching address:', err.message);
+    res.status(500).json({ status: 'error', message: err.message });
+  }
+};
+
+
 // 📬 Get all addresses for a user
 exports.getAddresses = async (req, res) => {
   try {
