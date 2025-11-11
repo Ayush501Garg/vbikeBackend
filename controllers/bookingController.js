@@ -1,10 +1,13 @@
 const Booking = require('../models/booking');
 const Vendor = require('../models/vendor');
+const mongoose = require('mongoose');
+
 
 exports.createBooking = async (req, res) => {
   try {
     const { user_id, product_id, vendor_id, shipping_address_id, pickup_date } = req.body;
 
+    console.log("💥body",req.body);
     // -------------------------------
     // 1️⃣ Validate required fields
     // -------------------------------
