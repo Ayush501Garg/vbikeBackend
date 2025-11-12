@@ -1,21 +1,14 @@
 const Vendor = require('../models/vendor');
 const geocodeAddress = require('../utils/geocode');
+const path = require('path');
+const fs = require('fs');
 
-// 🗺️ Fallback coordinates for major Indian cities
-const cityCoordinates = {
-  "New Delhi": { lat: 28.6139, lng: 77.2090 },
-  "Noida": { lat: 28.5355, lng: 77.3910 },
-  "Ghaziabad": { lat: 28.6692, lng: 77.4538 },
-  "Gurgaon": { lat: 28.4595, lng: 77.0266 },
-  "Mumbai": { lat: 19.0760, lng: 72.8777 },
-  "Pune": { lat: 18.5204, lng: 73.8567 },
-  "Bangalore": { lat: 12.9716, lng: 77.5946 },
-  "Hyderabad": { lat: 17.3850, lng: 78.4867 },
-  "Chennai": { lat: 13.0827, lng: 80.2707 },
-  "Kolkata": { lat: 22.5726, lng: 88.3639 },
-  "Ahmedabad": { lat: 23.0225, lng: 72.5714 },
-  "Jaipur": { lat: 26.9124, lng: 75.7873 }
-};
+// 🌐 Helper: Generate live URLs dynamically
+const getLiveUrl = (req, filename) =>
+  filename ? `${req.protocol}://${req.get('host')}/${filename}` : null;
+
+const getLiveUrls = (req, files) =>
+  files && files.length > 0 ? files.map(f => getLiveUrl(req, f)) : [];
 
 // 🏗️ Create Vendor
 exports.createVendor = async (req, res) => {
@@ -35,22 +28,22 @@ exports.createVendor = async (req, res) => {
     } = req.body;
 
     const fullAddress = `${address_line}, ${city}, ${state}, ${postal_code}, ${country}`;
-    let coordinates = await geocodeAddress(fullAddress);
+    const coordinates = await geocodeAddress(fullAddress);
 
-    // fallback
     if (!coordinates) {
-      if (cityCoordinates[city]) {
-        coordinates = cityCoordinates[city];
-      } else {
-        return res
-          .status(400)
-          .json({ status: "error", message: "Unable to get location from address" });
-      }
+      return res.status(400).json({
+        status: "error",
+        message: "Unable to get location from address"
+      });
     }
 
     const locationObj = Array.isArray(coordinates)
       ? { lat: coordinates[1], lng: coordinates[0] }
       : coordinates;
+
+    // ✅ Handle file uploads
+    const logoFile = req.files['logo'] ? req.files['logo'][0].filename : null;
+    const galleryFiles = req.files['gallery'] ? req.files['gallery'].map(f => f.filename) : [];
 
     const vendor = new Vendor({
       name,
@@ -63,30 +56,42 @@ exports.createVendor = async (req, res) => {
       email,
       opening_hours,
       available_products,
-      rating: Number(rating) || 0, // ✅ fix here
-      location: locationObj
+      rating: Number(rating) || 0,
+      location: locationObj,
+      logo: logoFile,
+      gallery: galleryFiles
     });
 
     await vendor.save();
 
-    res
-      .status(201)
-      .json({
-        status: "success",
-        message: "Vendor created successfully",
-        data: vendor
-      });
+    const vendorObj = vendor.toObject();
+    delete vendorObj.__v;
+
+    res.status(201).json({
+      status: "success",
+      message: "Vendor created successfully",
+      data: {
+        ...vendorObj,
+        logo: getLiveUrl(req, vendorObj.logo),
+        gallery: getLiveUrls(req, vendorObj.gallery)
+      }
+    });
   } catch (err) {
     res.status(500).json({ status: "error", message: err.message });
   }
 };
 
-
 // 📋 Get All Vendors
 exports.getVendors = async (req, res) => {
   try {
-    const vendors = await Vendor.find().populate('available_products');
-    res.json({ status: 'success', data: vendors });
+    const vendors = await Vendor.find().populate('available_products').select('-__v');
+    const formattedVendors = vendors.map(v => ({
+      ...v.toObject(),
+      logo: getLiveUrl(req, v.logo),
+      gallery: getLiveUrls(req, v.gallery)
+    }));
+
+    res.json({ status: 'success', data: formattedVendors });
   } catch (err) {
     res.status(500).json({ status: 'error', message: err.message });
   }
@@ -95,9 +100,18 @@ exports.getVendors = async (req, res) => {
 // 🔍 Get Single Vendor
 exports.getVendorById = async (req, res) => {
   try {
-    const vendor = await Vendor.findById(req.params.id).populate('available_products');
-    if (!vendor) return res.status(404).json({ status: 'error', message: 'Vendor not found' });
-    res.json({ status: 'success', data: vendor });
+    const vendor = await Vendor.findById(req.params.id).populate('available_products').select('-__v');
+    if (!vendor)
+      return res.status(404).json({ status: 'error', message: 'Vendor not found' });
+
+    res.json({
+      status: 'success',
+      data: {
+        ...vendor.toObject(),
+        logo: getLiveUrl(req, vendor.logo),
+        gallery: getLiveUrls(req, vendor.gallery)
+      }
+    });
   } catch (err) {
     res.status(500).json({ status: 'error', message: err.message });
   }
@@ -109,11 +123,10 @@ exports.updateVendor = async (req, res) => {
     const { address_line, city, state, postal_code, country } = req.body;
     let coordinates;
 
-    // update location if address changes
+    // ✅ Update location if address changes
     if (address_line || city || state || postal_code || country) {
       const fullAddress = `${address_line || ''}, ${city || ''}, ${state || ''}, ${postal_code || ''}, ${country || ''}`;
       coordinates = await geocodeAddress(fullAddress);
-      if (!coordinates && cityCoordinates[city]) coordinates = cityCoordinates[city];
       if (coordinates) {
         req.body.location = Array.isArray(coordinates)
           ? { lat: coordinates[1], lng: coordinates[0] }
@@ -121,9 +134,23 @@ exports.updateVendor = async (req, res) => {
       }
     }
 
-    const vendor = await Vendor.findByIdAndUpdate(req.params.id, req.body, { new: true });
-    if (!vendor) return res.status(404).json({ status: 'error', message: 'Vendor not found' });
-    res.json({ status: 'success', message: 'Vendor updated successfully', data: vendor });
+    // ✅ Handle file updates
+    if (req.files['logo']) req.body.logo = req.files['logo'][0].filename;
+    if (req.files['gallery']) req.body.gallery = req.files['gallery'].map(f => f.filename);
+
+    const vendor = await Vendor.findByIdAndUpdate(req.params.id, req.body, { new: true }).select('-__v');
+    if (!vendor)
+      return res.status(404).json({ status: 'error', message: 'Vendor not found' });
+
+    res.json({
+      status: 'success',
+      message: 'Vendor updated successfully',
+      data: {
+        ...vendor.toObject(),
+        logo: getLiveUrl(req, vendor.logo),
+        gallery: getLiveUrls(req, vendor.gallery)
+      }
+    });
   } catch (err) {
     res.status(500).json({ status: 'error', message: err.message });
   }
@@ -133,7 +160,21 @@ exports.updateVendor = async (req, res) => {
 exports.deleteVendor = async (req, res) => {
   try {
     const vendor = await Vendor.findByIdAndDelete(req.params.id);
-    if (!vendor) return res.status(404).json({ status: 'error', message: 'Vendor not found' });
+    if (!vendor)
+      return res.status(404).json({ status: 'error', message: 'Vendor not found' });
+
+    // ✅ Delete uploaded files
+    if (vendor.logo) {
+      const logoPath = path.join(__dirname, '..', 'uploads', vendor.logo);
+      if (fs.existsSync(logoPath)) fs.unlinkSync(logoPath);
+    }
+    if (vendor.gallery && vendor.gallery.length > 0) {
+      vendor.gallery.forEach(file => {
+        const filePath = path.join(__dirname, '..', 'uploads', file);
+        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+      });
+    }
+
     res.json({ status: 'success', message: 'Vendor deleted successfully' });
   } catch (err) {
     res.status(500).json({ status: 'error', message: err.message });
@@ -144,11 +185,9 @@ exports.deleteVendor = async (req, res) => {
 exports.getNearbyVendors = async (req, res) => {
   try {
     const { lat, lng, radius = 10 } = req.query;
-
     const userLat = parseFloat(lat);
     const userLng = parseFloat(lng);
 
-    // ✅ Validate coordinates
     if (!userLat || !userLng) {
       return res.status(400).json({
         status: 'error',
@@ -156,56 +195,30 @@ exports.getNearbyVendors = async (req, res) => {
       });
     }
 
-    // ✅ Fetch all vendors
     let vendors = await Vendor.find();
-
-    // ✅ Filter vendors within radius (km)
-    vendors = vendors.filter(vendor => {
-      if (!vendor.location?.lat || !vendor.location?.lng) return false;
-      const distance = getDistanceFromLatLonInKm(
-        userLat,
-        userLng,
-        vendor.location.lat,
-        vendor.location.lng
-      );
+    vendors = vendors.filter(v => {
+      if (!v.location?.lat || !v.location?.lng) return false;
+      const distance = getDistanceFromLatLonInKm(userLat, userLng, v.location.lat, v.location.lng);
       return distance <= radius;
     });
 
-    // ✅ Return nearby vendors
     res.json({
       status: 'success',
       message: `Found ${vendors.length} vendors within ${radius} km`,
       count: vendors.length,
-      data: vendors
+      data: vendors.map(v => ({
+        ...v.toObject(),
+        logo: getLiveUrl(req, v.logo),
+        gallery: getLiveUrls(req, v.gallery)
+      }))
     });
   } catch (err) {
     console.error('❌ Error in getNearbyVendors:', err);
-    res.status(500).json({
-      status: 'error',
-      message: err.message
-    });
+    res.status(500).json({ status: 'error', message: err.message });
   }
 };
 
-// 🧮 Haversine formula (in KM)
-function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
-  const R = 6371;
-  const dLat = deg2rad(lat2 - lat1);
-  const dLon = deg2rad(lon2 - lon1);
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
-    Math.sin(dLon / 2) * Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-}
-
-function deg2rad(deg) {
-  return deg * (Math.PI / 180);
-}
-
-
-// 🔢 Haversine Formula
+// 🧮 Haversine formula
 function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
   const R = 6371;
   const dLat = deg2rad(lat2 - lat1);
