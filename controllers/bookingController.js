@@ -130,7 +130,7 @@ exports.getAllBookings = async (req, res) => {
 exports.getBookingsByUserId = async (req, res) => {
   try {
     const { user_id } = req.params;
-
+console.log(user_id);
     // Validate user_id
     if (!mongoose.Types.ObjectId.isValid(user_id)) {
       return res.status(400).json({
