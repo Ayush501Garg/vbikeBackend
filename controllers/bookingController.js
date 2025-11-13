@@ -126,6 +126,46 @@ exports.getAllBookings = async (req, res) => {
   }
 };
 
+// ✅ Get All Bookings for a Specific User
+exports.getBookingsByUserId = async (req, res) => {
+  try {
+    const { user_id } = req.params;
+
+    // Validate user_id
+    if (!mongoose.Types.ObjectId.isValid(user_id)) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Invalid user_id format',
+      });
+    }
+
+    // Find all bookings by this user
+    const bookings = await Booking.find({ user_id })
+      .populate('user_id product_id vendor_id shipping_address_id')
+      .sort({ createdAt: -1 }); // optional: newest first
+
+    if (bookings.length === 0) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'No bookings found for this user',
+      });
+    }
+
+    res.status(200).json({
+      status: 'success',
+      count: bookings.length,
+      data: bookings,
+    });
+  } catch (err) {
+    console.error('❌ Error fetching user bookings:', err.message);
+    res.status(500).json({
+      status: 'error',
+      message: 'Internal server error',
+    });
+  }
+};
+
+
 // ✅ Get Booking by ID
 exports.getBookingById = async (req, res) => {
   try {
