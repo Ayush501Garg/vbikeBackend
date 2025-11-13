@@ -2,15 +2,14 @@ const Booking = require('../models/booking');
 const Vendor = require('../models/vendor');
 const mongoose = require('mongoose');
 
-
+// ✅ Create a Booking
 exports.createBooking = async (req, res) => {
   try {
     const { user_id, product_id, vendor_id, shipping_address_id, pickup_date } = req.body;
 
-    console.log("💥body",req.body);
-    // -------------------------------
+    console.log("💥body", req.body);
+
     // 1️⃣ Validate required fields
-    // -------------------------------
     if (!user_id || !product_id || !vendor_id || !shipping_address_id) {
       return res.status(400).json({
         status: 'error',
@@ -18,9 +17,7 @@ exports.createBooking = async (req, res) => {
       });
     }
 
-    // -------------------------------
     // 2️⃣ Validate MongoDB ObjectId format
-    // -------------------------------
     const ids = { user_id, product_id, vendor_id, shipping_address_id };
     for (const [key, value] of Object.entries(ids)) {
       if (!mongoose.Types.ObjectId.isValid(value)) {
@@ -31,9 +28,7 @@ exports.createBooking = async (req, res) => {
       }
     }
 
-    // -------------------------------
     // 3️⃣ Validate pickup_date if provided
-    // -------------------------------
     let baseDate = pickup_date ? new Date(pickup_date) : new Date();
     if (isNaN(baseDate.getTime())) {
       return res.status(400).json({
@@ -42,17 +37,13 @@ exports.createBooking = async (req, res) => {
       });
     }
 
-    // -------------------------------
     // 4️⃣ Check Vendor existence
-    // -------------------------------
     const vendor = await Vendor.findById(vendor_id);
     if (!vendor) {
       return res.status(404).json({ status: 'error', message: 'Vendor not found' });
     }
 
-    // -------------------------------
     // 5️⃣ Check product availability
-    // -------------------------------
     const isAvailable = vendor.available_products.some(
       p => p.toString() === product_id.toString()
     );
@@ -65,9 +56,7 @@ exports.createBooking = async (req, res) => {
 
     const status = isAvailable ? 'ready' : 'delayed';
 
-    // -------------------------------
     // 6️⃣ Create booking
-    // -------------------------------
     const booking = new Booking({
       user_id,
       product_id,
@@ -79,9 +68,7 @@ exports.createBooking = async (req, res) => {
 
     await booking.save();
 
-    // -------------------------------
     // 7️⃣ Format pickup date for response
-    // -------------------------------
     const formattedDate = finalPickupDate.toLocaleString('en-IN', {
       timeZone: 'Asia/Kolkata',
       weekday: 'long',
@@ -96,9 +83,7 @@ exports.createBooking = async (req, res) => {
       ? `Product not currently available. Your bike can be picked up on ${formattedDate}.`
       : `Booking confirmed! 🎉 You can take your bike on ${formattedDate}.`;
 
-    // -------------------------------
     // 8️⃣ Send response
-    // -------------------------------
     res.status(201).json({
       status: 'success',
       message,
@@ -112,14 +97,13 @@ exports.createBooking = async (req, res) => {
   }
 };
 
-
-
-
 // ✅ Get All Bookings
 exports.getAllBookings = async (req, res) => {
   try {
     const bookings = await Booking.find()
-      .populate('user_id product_id vendor_id shipping_address_id');
+      .populate('user_id product_id vendor_id shipping_address_id')
+      .sort({ createdAt: -1 });
+
     res.json({ status: 'success', count: bookings.length, data: bookings });
   } catch (err) {
     res.status(500).json({ status: 'error', message: err.message });
@@ -130,8 +114,8 @@ exports.getAllBookings = async (req, res) => {
 exports.getBookingsByUserId = async (req, res) => {
   try {
     const { user_id } = req.params;
-console.log(user_id);
-    // Validate user_id
+    console.log('Fetching bookings for user:', user_id);
+
     if (!mongoose.Types.ObjectId.isValid(user_id)) {
       return res.status(400).json({
         status: 'error',
@@ -139,10 +123,9 @@ console.log(user_id);
       });
     }
 
-    // Find all bookings by this user
     const bookings = await Booking.find({ user_id })
       .populate('user_id product_id vendor_id shipping_address_id')
-      .sort({ createdAt: -1 }); // optional: newest first
+      .sort({ createdAt: -1 });
 
     if (bookings.length === 0) {
       return res.status(404).json({
@@ -158,21 +141,28 @@ console.log(user_id);
     });
   } catch (err) {
     console.error('❌ Error fetching user bookings:', err.message);
-    res.status(500).json({
-      status: 'error',
-      message: 'Internal server error',
-    });
+    res.status(500).json({ status: 'error', message: 'Internal server error' });
   }
 };
-
 
 // ✅ Get Booking by ID
 exports.getBookingById = async (req, res) => {
   try {
-    const booking = await Booking.findById(req.params.id)
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Invalid booking ID format',
+      });
+    }
+
+    const booking = await Booking.findById(id)
       .populate('user_id product_id vendor_id shipping_address_id');
+
     if (!booking)
       return res.status(404).json({ status: 'error', message: 'Booking not found' });
+
     res.json({ status: 'success', data: booking });
   } catch (err) {
     res.status(500).json({ status: 'error', message: err.message });
