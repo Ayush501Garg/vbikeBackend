@@ -1,6 +1,7 @@
 const express = require('express');
 const dotenv = require('dotenv');
 const http = require('http');
+const path = require('path');
 const connectDB = require('./config/db');
 dotenv.config();
 
@@ -52,7 +53,7 @@ app.use((req, res, next) => {
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
-app.use(express.static('uploads'));
+app.use(express.static(path.join(__dirname, 'uploads')));
 
 // ✅ Connect to MongoDB first
 

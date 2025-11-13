@@ -13,6 +13,7 @@ const sendError = (res, code, message) =>
 // ✅ Create Product
 exports.createProduct = async (req, res) => {
   try {
+    console.log("Comming In Create Product");
     const {
       name,
       description,
@@ -29,6 +30,7 @@ exports.createProduct = async (req, res) => {
 
     // Validate required fields
     const requiredFields = { name, price, category_id };
+    console.log("requiredFields ",requiredFields);
     for (const [key, value] of Object.entries(requiredFields)) {
       if (!value || value === '') {
         return sendError(res, 400, `Field "${key}" is required.`);
