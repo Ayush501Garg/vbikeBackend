@@ -5,6 +5,8 @@ const path = require('path');
 const connectDB = require('./config/db');
 dotenv.config();
 
+const app = express();
+app.use(express.static(path.join(__dirname, 'uploads')));
 
 // Import routes
 const authRoutes = require('./routes/authRoutes');
@@ -29,7 +31,7 @@ const { initSocket, sendToUser } = require('./socket');
 const BikeRegister = require("./models/bikeRegisterModel"); // adjust path
 
 
-const app = express();
+
 
 const cors = require('cors');
 
@@ -53,7 +55,6 @@ app.use((req, res, next) => {
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
-app.use(express.static(path.join(__dirname, 'uploads')));
 
 // ✅ Connect to MongoDB first
 
