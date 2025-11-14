@@ -20,6 +20,7 @@ const cartRoutes = require("./routes/cartRoutes");
 const addressRoutes = require('./routes/addressRoutes');
 const vendorRoutes = require('./routes/vendorRoutes');
 const bookingRoutes = require('./routes/bookingRoutes');
+const bookRideRoutes = require('./routes/bookRideRoutes');
 
 
 const orderRoutes = require("./routes/orderRoutes");
@@ -127,10 +128,12 @@ app.use("/api/wishlist",wishlistProductRoutes)
 app.use('/api/address', addressRoutes);
 app.use('/api/vendors', vendorRoutes);
 app.use('/api/bookings', bookingRoutes);
+app.use("/api/book-ride", bookRideRoutes);
 // Skip
 app.use("/api/cart", cartRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/payments", paymentRoutes);
+
 
 
 
