@@ -128,7 +128,7 @@ app.use("/api/wishlist",wishlistProductRoutes)
 app.use('/api/address', addressRoutes);
 app.use('/api/vendors', vendorRoutes);
 app.use('/api/bookings', bookingRoutes);
-app.use("/api/book-ride", bookRideRoutes);
+app.use("/api/bookrides", bookRideRoutes);
 // Skip
 app.use("/api/cart", cartRoutes);
 app.use("/api/orders", orderRoutes);
