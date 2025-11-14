@@ -4,7 +4,7 @@ const mongoose = require('mongoose');
 
 // ---------- HELPERS FOR LIVE IMAGE URLs ----------
 const getLiveUrl = (req, filename) =>
-  filename ? `${req.protocol}://${req.get('host')}/uploads/${filename}` : null;
+  filename ? `${req.protocol}://${req.get('host')}/${filename}` : null;
 
 const getLiveUrls = (req, files) =>
   files && files.length ? files.map(f => getLiveUrl(req, f)) : [];
@@ -104,12 +104,8 @@ const formatRide = (req, ride) => ({
 // ---------- GET ALL BOOK RIDES ----------
 exports.getAllBookRides = async (req, res) => {
   try {
-    let rides = await BookRide.find()
-      .populate('user_id')
-      .populate('vendor_id')
-      .populate('shipping_address_id')
-      .populate('product_id')
-      .sort({ createdAt: -1 });
+    let rides = await BookRide.find().populate('user_id product_id vendor_id shipping_address_id').sort({ createdAt: -1 });
+      
 
     rides = rides.map(r => formatRide(req, r.toObject()));
 
@@ -127,12 +123,9 @@ exports.getBookRidesByUser = async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(user_id))
       return res.status(400).json({ status: 'error', message: 'Invalid user_id' });
 
-    let rides = await BookRide.find({ user_id })
-      .populate('user_id')
-      .populate('vendor_id')
-      .populate('shipping_address_id')
-      .populate('product_id')
-      .sort({ createdAt: -1 });
+    let rides = await BookRide.find({ user_id }).populate('user_id product_id vendor_id shipping_address_id').sort({ createdAt: -1 });
+      
+
 
     if (!rides.length)
       return res.status(404).json({ status: 'error', message: 'No rides found for this user' });
@@ -154,10 +147,7 @@ exports.getBookRideById = async (req, res) => {
       return res.status(400).json({ status: 'error', message: 'Invalid ID' });
 
     let ride = await BookRide.findById(id)
-      .populate('user_id')
-      .populate('vendor_id')
-      .populate('shipping_address_id')
-      .populate('product_id');
+      .populate('user_id product_id vendor_id shipping_address_id');
 
     if (!ride)
       return res.status(404).json({ status: 'error', message: 'Ride not found' });
@@ -174,10 +164,7 @@ exports.getBookRideById = async (req, res) => {
 exports.updateBookRide = async (req, res) => {
   try {
     let ride = await BookRide.findByIdAndUpdate(req.params.id, req.body, { new: true })
-      .populate('user_id')
-      .populate('vendor_id')
-      .populate('shipping_address_id')
-      .populate('product_id');
+      .populate('user_id product_id vendor_id shipping_address_id');
 
     if (!ride)
       return res.status(404).json({ status: 'error', message: 'Ride not found' });

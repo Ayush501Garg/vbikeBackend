@@ -4,7 +4,7 @@ const mongoose = require('mongoose');
 
 // Helper to convert filename to live URL
 const getLiveUrl = (req, filename) =>
-  filename ? `${req.protocol}://${req.get('host')}/uploads/${filename}` : null;
+  filename ? `${req.protocol}://${req.get('host')}/${filename}` : null;
 
 // ---------- CREATE BOOKING ----------
 exports.createBooking = async (req, res) => {
