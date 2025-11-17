@@ -118,22 +118,38 @@ exports.verifyOTP = async (req, res) => {
       });
     }
 
+    // ✅ Create permanent user
     const newUser = await User.create({
       name: tempUser.name,
       email: tempUser.email,
       phone: tempUser.phone,
       password: tempUser.password,
-      role: tempUser.role,
-      isVerified: true,
       role: tempUser.role || "user",
+      isVerified: true,
     });
 
+    // ❗ Create token after user is created
+    const token = generateToken(newUser._id);
+
+    newUser.token = token;
+    await newUser.save();
+
+    // Delete temporary user
     await TempUser.deleteOne({ _id: tempUser._id });
 
+    // ✅ Return login-like response
     return res.status(200).json({
       status: "success",
       code: 200,
-      message: "Email verified successfully. You can now login.",
+      message: "Email verified successfully",
+      user: {
+        userId: newUser._id,
+        name: newUser.name,
+        email: newUser.email,
+        phone: newUser.phone,
+        role: newUser.role,
+        token: token,
+      },
     });
   } catch (err) {
     console.error("Verify OTP Error:", err);
