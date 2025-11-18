@@ -51,7 +51,7 @@ exports.createBooking = async (req, res) => {
     const booking = new Booking({ user_id, product_id, vendor_id, shipping_address_id, status, pickup_date: finalPickupDate });
     await booking.save();
 
-    const formattedDate = finalPickupDate.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', weekday:'long', year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit' });
+    const formattedDate = finalPickupDate.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', weekday:'long', year:'numeric', month:'long', day:'numeric'});
     const message = delayed
       ? `Product not currently available. Your bike can be picked up on ${formattedDate}.`
       : `Booking confirmed! 🎉 You can take your bike on ${formattedDate}.`;
