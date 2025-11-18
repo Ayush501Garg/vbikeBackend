@@ -3,8 +3,16 @@ const Vendor = require('../models/vendor');
 const mongoose = require('mongoose');
 
 // Helper to convert filename to live URL
-const getLiveUrl = (req, filename) =>
-  filename ? `${req.protocol}://${req.get('host')}/${filename}` : null;
+const getLiveUrl = (req, filename) => {
+  if (!filename) return null;
+
+  // If file already contains http or https → return as-is
+  if (filename.startsWith('http://') || filename.startsWith('https://')) {
+    return filename;
+  }
+
+  return `${req.protocol}://${req.get('host')}/${filename}`;
+};
 
 // ---------- CREATE BOOKING ----------
 exports.createBooking = async (req, res) => {
