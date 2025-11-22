@@ -1,25 +1,11 @@
-const Vendor = require('../models/vendor');
-const geocodeAddress = require('../utils/geocode');
+const Vendor = require("../models/vendor");
+const Product = require("../models/product");
+const geocodeAddress = require("../utils/geocode");
 
-const path = require('path');
 
-// 🗺️ Fallback coordinates for major Indian cities
-const cityCoordinates = {
-  "New Delhi": { lat: 28.6139, lng: 77.2090 },
-  "Noida": { lat: 28.5355, lng: 77.3910 },
-  "Ghaziabad": { lat: 28.6692, lng: 77.4538 },
-  "Gurgaon": { lat: 28.4595, lng: 77.0266 },
-  "Mumbai": { lat: 19.0760, lng: 72.8777 },
-  "Pune": { lat: 18.5204, lng: 73.8567 },
-  "Bangalore": { lat: 12.9716, lng: 77.5946 },
-  "Hyderabad": { lat: 17.3850, lng: 78.4867 },
-  "Chennai": { lat: 13.0827, lng: 80.2707 },
-  "Kolkata": { lat: 22.5726, lng: 88.3639 },
-  "Ahmedabad": { lat: 23.0225, lng: 72.5714 },
-  "Jaipur": { lat: 26.9124, lng: 75.7873 }
-};
-
-// 🏗️ Create Vendor
+// ----------------------------------------------------
+// CREATE VENDOR
+// ----------------------------------------------------
 exports.createVendor = async (req, res) => {
   try {
     const {
@@ -32,22 +18,17 @@ exports.createVendor = async (req, res) => {
       phone,
       email,
       opening_hours,
-      available_products,
       rating
     } = req.body;
 
     const fullAddress = `${address_line}, ${city}, ${state}, ${postal_code}, ${country}`;
     let coordinates = await geocodeAddress(fullAddress);
 
-
-    console.log("💥💥💥coordinates",coordinates);
-
-    // fallback
-    if (!coordinates) { 
-        return res
-          .status(400)
-          .json({ status: "error", message: "Unable to get location from address" });
-    
+    if (!coordinates) {
+      return res.status(400).json({
+        status: "error",
+        message: "Unable to get location from address"
+      });
     }
 
     const locationObj = Array.isArray(coordinates)
@@ -64,211 +45,391 @@ exports.createVendor = async (req, res) => {
       phone,
       email,
       opening_hours,
-      available_products,
-      rating: Number(rating) || 0, // ✅ fix here
-      location: locationObj
+      rating: Number(rating) || 0,
+      location: locationObj,
+      inventory: []
     });
 
     await vendor.save();
 
-    res
-      .status(201)
-      .json({
-        status: "success",
-        message: "Vendor created successfully",
-        data: vendor
-      });
+    res.status(201).json({
+      status: "success",
+      message: "Vendor created successfully",
+      data: vendor,
+    });
   } catch (err) {
     res.status(500).json({ status: "error", message: err.message });
   }
 };
 
 
-// Helper to generate live URLs dynamically from request
-const getLiveUrl = (req, filename) =>
-  filename ? `${req.protocol}://${req.get('host')}/${filename}` : null;
-const getLiveUrls = (req, files) =>
-  files && files.length > 0 ? files.map(f => getLiveUrl(req, f)) : [];
 
-// 📋 Get All Vendors
+// ----------------------------------------------------
+// GET ALL VENDORS WITH POPULATED PRODUCTS
+// ----------------------------------------------------
 exports.getVendors = async (req, res) => {
   try {
-    const vendors = await Vendor.find().populate('available_products');
-
-    const formattedVendors = vendors.map(vendor => {
-      const vendorObj = vendor.toObject();
-
-      // ✅ Transform product images
-      if (vendorObj.available_products && vendorObj.available_products.length > 0) {
-        vendorObj.available_products = vendorObj.available_products.map(prod => ({
-          ...prod,
-          image_url: getLiveUrl(req, prod.image_url),
-          thumbnails: getLiveUrls(req, prod.thumbnails)
-        }));
-      }
-
-      return vendorObj;
-    });
-
-    res.json({
-      status: 'success',
-      data: formattedVendors
-    });
+    const vendors = await Vendor.find().populate("inventory.product");
+    res.json({ status: "success", data: vendors });
   } catch (err) {
-    res.status(500).json({
-      status: 'error',
-      message: err.message
-    });
+    res.status(500).json({ status: "error", message: err.message });
   }
 };
 
-// 🔍 Get Single Vendor
+
+
+// ----------------------------------------------------
+// GET SINGLE VENDOR
+// ----------------------------------------------------
 exports.getVendorById = async (req, res) => {
   try {
-    const vendor = await Vendor.findById(req.params.id).populate('available_products');
-    if (!vendor)
-      return res.status(404).json({
-        status: 'error',
-        message: 'Vendor not found'
-      });
-
-    const vendorObj = vendor.toObject();
-
-    // ✅ Transform product images
-    if (vendorObj.available_products && vendorObj.available_products.length > 0) {
-      vendorObj.available_products = vendorObj.available_products.map(prod => ({
-        ...prod,
-        image_url: getLiveUrl(req, prod.image_url),
-        thumbnails: getLiveUrls(req, prod.thumbnails)
-      }));
-    }
-
-    res.json({
-      status: 'success',
-      data: vendorObj
-    });
+    const vendor = await Vendor.findById(req.params.id).populate("inventory.product");
+    if (!vendor) return res.status(404).json({ status: "error", message: "Vendor not found" });
+    res.json({ status: "success", data: vendor });
   } catch (err) {
-    res.status(500).json({
-      status: 'error',
-      message: err.message
-    });
+    res.status(500).json({ status: "error", message: err.message });
   }
 };
 
-// ✏️ Update Vendor
+
+
+// ----------------------------------------------------
+// UPDATE VENDOR PROFILE
+// ----------------------------------------------------
 exports.updateVendor = async (req, res) => {
   try {
-    const { address_line, city, state, postal_code, country } = req.body;
-    let coordinates;
+    const {
+      address_line,
+      city,
+      state,
+      postal_code,
+      country
+    } = req.body;
 
-    // update location if address changes
     if (address_line || city || state || postal_code || country) {
-      const fullAddress = `${address_line || ''}, ${city || ''}, ${state || ''}, ${postal_code || ''}, ${country || ''}`;
-      coordinates = await geocodeAddress(fullAddress);
-      if (!coordinates && cityCoordinates[city]) coordinates = cityCoordinates[city];
-      if (coordinates) {
-        req.body.location = Array.isArray(coordinates)
-          ? { lat: coordinates[1], lng: coordinates[0] }
-          : coordinates;
+      const fullAddress = `${address_line}, ${city}, ${state}, ${postal_code}, ${country}`;
+      const coordinates = await geocodeAddress(fullAddress);
+
+      if (!coordinates) {
+        return res.status(400).json({
+          status: "error",
+          message: "Unable to get location from address",
+        });
       }
+
+      req.body.location = Array.isArray(coordinates)
+        ? { lat: coordinates[1], lng: coordinates[0] }
+        : coordinates;
     }
 
     const vendor = await Vendor.findByIdAndUpdate(req.params.id, req.body, { new: true });
-    if (!vendor) return res.status(404).json({ status: 'error', message: 'Vendor not found' });
-    res.json({ status: 'success', message: 'Vendor updated successfully', data: vendor });
+
+    if (!vendor) return res.status(404).json({ status: "error", message: "Vendor not found" });
+
+    res.json({ status: "success", message: "Vendor updated successfully", data: vendor });
   } catch (err) {
-    res.status(500).json({ status: 'error', message: err.message });
+    res.status(500).json({ status: "error", message: err.message });
   }
 };
 
-// 🗑️ Delete Vendor
+
+
+// ----------------------------------------------------
+// DELETE VENDOR
+// ----------------------------------------------------
 exports.deleteVendor = async (req, res) => {
   try {
     const vendor = await Vendor.findByIdAndDelete(req.params.id);
-    if (!vendor) return res.status(404).json({ status: 'error', message: 'Vendor not found' });
-    res.json({ status: 'success', message: 'Vendor deleted successfully' });
+    if (!vendor)
+      return res.status(404).json({ status: "error", message: "Vendor not found" });
+
+    res.json({ status: "success", message: "Vendor deleted successfully" });
   } catch (err) {
-    res.status(500).json({ status: 'error', message: err.message });
+    res.status(500).json({ status: "error", message: err.message });
   }
 };
 
-// 📍 Get Nearby Vendors
+
+
+// ----------------------------------------------------
+// ADD PRODUCT TO VENDOR INVENTORY
+// ----------------------------------------------------
+exports.addProductToInventory = async (req, res) => {
+  try {
+    const { vendorId, product, assigned_stock } = req.body;
+
+    // 1. Fetch product
+    const productData = await Product.findById(product);
+    if (!productData) return res.status(404).json({ message: "Product not found" });
+
+    // 2. Check warehouse stock
+    if (assigned_stock > productData.stock_quantity) {
+      return res.status(400).json({
+        message: `Only ${productData.stock_quantity} units available in warehouse`
+      });
+    }
+
+    // 3. Fetch vendor
+    const vendor = await Vendor.findById(vendorId);
+    if (!vendor) return res.status(404).json({ message: "Vendor not found" });
+
+    // 4. Check if already exists
+    const existing = vendor.inventory.find(item => item.product.toString() === product);
+    if (existing) {
+      return res.status(400).json({
+        message: "Product already added. Use update instead."
+      });
+    }
+
+    // 5. Deduct warehouse stock
+    productData.stock_quantity -= assigned_stock;
+    await productData.save();
+
+    // 6. Add into vendor
+    vendor.inventory.push({
+      product,
+      assigned_stock,
+      sold_stock: 0,
+      available_stock: assigned_stock
+    });
+
+    await vendor.save();
+
+    res.json({ message: "Product assigned to vendor", vendor });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+
+
+// ----------------------------------------------------
+// UPDATE INVENTORY (ADD MORE STOCK)
+// assigned_stock = "how much more to add"
+// ----------------------------------------------------
+exports.updateInventory = async (req, res) => {
+  try {
+    const { vendorId, product, assigned_stock, sold_stock } = req.body;
+
+    const vendor = await Vendor.findById(vendorId);
+    if (!vendor) return res.status(404).json({ message: "Vendor not found" });
+
+    const productData = await Product.findById(product);
+    if (!productData) return res.status(404).json({ message: "Product not found" });
+
+    const item = vendor.inventory.find(i => i.product.toString() === product);
+    if (!item) {
+      return res.status(404).json({ message: "Product not in vendor inventory" });
+    }
+
+    // currently assigned to vendor
+    const oldAssigned = item.assigned_stock;
+
+    // user means "add this much more"
+    const addedAmount = assigned_stock ?? 0;
+
+    if (addedAmount < 0)
+      return res.status(400).json({ message: "assigned_stock must be positive" });
+
+    // check warehouse stock
+    if (addedAmount > productData.stock_quantity) {
+      return res.status(400).json({
+        message: `Only ${productData.stock_quantity} units available in warehouse`
+      });
+    }
+
+    // apply increase
+    const newAssigned = oldAssigned + addedAmount;
+
+    // deduct from warehouse
+    productData.stock_quantity -= addedAmount;
+
+    // sold stock update
+    const newSold = sold_stock ?? item.sold_stock;
+    if (newSold > newAssigned) {
+      return res.status(400).json({ message: "sold_stock cannot exceed assigned stock" });
+    }
+
+    // update vendor inventory
+    item.assigned_stock = newAssigned;
+    item.sold_stock = newSold;
+    item.available_stock = newAssigned - newSold;
+
+    await productData.save();
+    await vendor.save();
+
+    res.json({ message: "Inventory updated", vendor });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+
+
+// ----------------------------------------------------
+// REMOVE PRODUCT FROM INVENTORY
+// → Refund assigned stock back to warehouse
+// ----------------------------------------------------
+exports.removeProductFromInventory = async (req, res) => {
+  try {
+    const { vendorId, productId } = req.body;
+
+    const vendor = await Vendor.findById(vendorId);
+    if (!vendor) return res.status(404).json({ message: "Vendor not found" });
+
+    const item = vendor.inventory.find(i => i.product.toString() === productId);
+    if (!item) return res.status(404).json({ message: "Product not in inventory" });
+
+    // return unused stock back to warehouse
+    const productData = await Product.findById(productId);
+    if (productData) {
+      productData.stock_quantity += item.available_stock;
+      await productData.save();
+    }
+
+    vendor.inventory = vendor.inventory.filter(i => i.product.toString() !== productId);
+    await vendor.save();
+
+    res.json({ message: "Product removed from inventory", vendor });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+
+
+// ----------------------------------------------------
+// GET TOTAL ASSIGNED STOCK OF A PRODUCT ACROSS ALL VENDORS
+// ----------------------------------------------------
+exports.getTotalAssignedStock = async (req, res) => {
+  try {
+    const { productId } = req.params;
+
+    // Fetch product details
+    const product = await Product.findById(productId);
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    // Fetch all vendors
+    const vendors = await Vendor.find();
+
+    let totalAssigned = 0;
+    let totalSold = 0;
+    let totalAvailableAtVendors = 0;
+
+    vendors.forEach(vendor => {
+      vendor.inventory.forEach(item => {
+        if (item.product.toString() === productId) {
+          totalAssigned += item.assigned_stock;
+          totalSold += item.sold_stock;
+          totalAvailableAtVendors += item.available_stock;
+        }
+      });
+    });
+
+    const remainingInWarehouse = product.stock_quantity;
+
+    const totalSystemQuantity =
+      remainingInWarehouse + totalAssigned;
+
+    res.json({
+      productId,
+      totalAssigned,
+      totalSold,
+      totalAvailableAtVendors,
+      remainingInWarehouse,
+      totalSystemQuantity
+    });
+
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+
+// ----------------------------------------------------
+// GET TOTAL STOCK SUMMARY FOR ALL PRODUCTS
+// ----------------------------------------------------
+exports.getAllProductsTotalStock = async (req, res) => {
+  try {
+    const products = await Product.find();
+    const vendors = await Vendor.find();
+
+    const result = [];
+
+    products.forEach(product => {
+      let totalAssigned = 0;
+      let totalSold = 0;
+      let totalAvailableAtVendors = 0;
+
+      vendors.forEach(vendor => {
+        vendor.inventory.forEach(item => {
+          if (item.product.toString() === product._id.toString()) {
+            totalAssigned += item.assigned_stock;
+            totalSold += item.sold_stock;
+            totalAvailableAtVendors += item.available_stock;
+          }
+        });
+      });
+
+      result.push({
+        productId: product._id,
+        productName: product.name,
+        totalAssigned,
+        totalSold,
+        totalAvailableAtVendors,
+        remainingInWarehouse: product.stock_quantity,
+        totalSystemQuantity: totalAssigned + product.stock_quantity
+      });
+    });
+
+    res.json({
+      status: "success",
+      count: result.length,
+      data: result
+    });
+
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+
+
+// ----------------------------------------------------
+// NEARBY VENDORS (Haversine)
+// ----------------------------------------------------
+function deg2rad(deg) {
+  return deg * (Math.PI / 180);
+}
+function getDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = deg2rad(lat2 - lat1);
+  const dLon = deg2rad(lon2 - lon1);
+
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(deg2rad(lat1)) *
+      Math.cos(deg2rad(lat2)) *
+      Math.sin(dLon / 2) ** 2;
+
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 exports.getNearbyVendors = async (req, res) => {
   try {
     const { lat, lng, radius = 10 } = req.query;
 
-    const userLat = parseFloat(lat);
-    const userLng = parseFloat(lng);
+    const vendors = await Vendor.find();
 
-    // ✅ Validate coordinates
-    if (!userLat || !userLng) {
-      return res.status(400).json({
-        status: 'error',
-        message: 'Latitude and longitude are required'
-      });
-    }
+    const near = vendors.filter(v =>
+      v.location?.lat &&
+      getDistance(lat, lng, v.location.lat, v.location.lng) <= radius
+    );
 
-    // ✅ Fetch all vendors
-    let vendors = await Vendor.find();
-
-    // ✅ Filter vendors within radius (km)
-    vendors = vendors.filter(vendor => {
-      if (!vendor.location?.lat || !vendor.location?.lng) return false;
-      const distance = getDistanceFromLatLonInKm(
-        userLat,
-        userLng,
-        vendor.location.lat,
-        vendor.location.lng
-      );
-      return distance <= radius;
-    });
-
-    // ✅ Return nearby vendors
-    res.json({
-      status: 'success',
-      message: `Found ${vendors.length} vendors within ${radius} km`,
-      count: vendors.length,
-      data: vendors
-    });
+    res.json({ status: "success", count: near.length, data: near });
   } catch (err) {
-    console.error('❌ Error in getNearbyVendors:', err);
-    res.status(500).json({
-      status: 'error',
-      message: err.message
-    });
+    res.status(500).json({ status: "error", message: err.message });
   }
 };
-
-// 🧮 Haversine formula (in KM)
-function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
-  const R = 6371;
-  const dLat = deg2rad(lat2 - lat1);
-  const dLon = deg2rad(lon2 - lon1);
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
-    Math.sin(dLon / 2) * Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-}
-
-function deg2rad(deg) {
-  return deg * (Math.PI / 180);
-}
-
-
-// 🔢 Haversine Formula
-function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
-  const R = 6371;
-  const dLat = deg2rad(lat2 - lat1);
-  const dLon = deg2rad(lon2 - lon1);
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
-    Math.sin(dLon / 2) * Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-}
-function deg2rad(deg) {
-  return deg * (Math.PI / 180);
-}

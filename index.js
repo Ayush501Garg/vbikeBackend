@@ -27,6 +27,8 @@ const vendorProductApprovalRoutes = require('./routes/vendorProductApprovalRoute
 const orderRoutes = require("./routes/orderRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
 
+const walletRoutes = require("./routes/walletRoutes");
+
 
 // Import socket module
 const { initSocket, sendToUser } = require('./socket');
@@ -135,6 +137,7 @@ app.use("/api/productApproval", vendorProductApprovalRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/payments", paymentRoutes);
+app.use("/api/wallet", walletRoutes);
 
 
 // Start server
