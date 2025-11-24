@@ -37,7 +37,7 @@ exports.createBookRide = async (req, res) => {
         return res.status(400).json({ status: 'error', message: `${key} is invalid` });
     }
 
-    // Verify documents exist
+    // Verify documents
     const user = await User.findById(user_id);
     if (!user) return res.status(404).json({ status: 'error', message: 'User not found' });
 
@@ -55,14 +55,27 @@ exports.createBookRide = async (req, res) => {
     if (isNaN(baseDate.getTime()))
       return res.status(400).json({ status: 'error', message: 'Invalid pickup_date' });
 
-    // Check availability
-    const isAvailable = vendor.available_products?.some(p => p.toString() === product_id.toString());
+    // ⭐ FIXED AVAILABILITY CHECK ⭐
+    const productEntry = vendor.inventory.find(
+      item => item.product.toString() === product_id.toString()
+    );
+
+    const isAvailable = productEntry && productEntry.available_stock > 0;
+
     const delayed = !isAvailable;
-    const finalPickupDate = delayed ? new Date(baseDate.getTime() + 24 * 60 * 60 * 1000) : baseDate;
+    const finalPickupDate = delayed
+      ? new Date(baseDate.getTime() + 24 * 60 * 60 * 1000)
+      : baseDate;
+
     const status = isAvailable ? 'ready' : 'delayed';
 
     const bookride = await BookRide.create({
-      user_id, product_id, vendor_id, shipping_address_id, status, pickup_date: finalPickupDate
+      user_id,
+      product_id,
+      vendor_id,
+      shipping_address_id,
+      status,
+      pickup_date: finalPickupDate
     });
 
     const formattedDate = finalPickupDate.toLocaleString('en-IN', {
@@ -70,7 +83,7 @@ exports.createBookRide = async (req, res) => {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
-      day: 'numeric',
+      day: 'numeric'
     });
 
     const message = delayed
@@ -83,6 +96,7 @@ exports.createBookRide = async (req, res) => {
     res.status(500).json({ status: 'error', message: err.message });
   }
 };
+
 
 // ---------- GET ALL RIDES ----------
 exports.getAllBookRides = async (req, res) => {
@@ -171,16 +185,25 @@ exports.checkBookRideAvailability = async (req, res) => {
     const ride = await BookRide.findById(req.params.id)
       .populate('vendor_id product_id');
 
-    if (!ride) return res.status(404).json({ status: 'error', message: 'Ride not found' });
+    if (!ride)
+      return res.status(404).json({ status: 'error', message: 'Ride not found' });
 
-    const isAvailable = ride.vendor_id.available_products?.some(
-      p => p.toString() === ride.product_id._id.toString()
+    const vendor = ride.vendor_id;
+    const productId = ride.product_id._id.toString();
+
+    // ⭐ FIXED INVENTORY CHECK ⭐
+    const productEntry = vendor.inventory.find(
+      item => item.product.toString() === productId
     );
+
+    const isAvailable = productEntry && productEntry.available_stock > 0;
 
     res.json({
       status: 'success',
       availability: isAvailable ? 'ready' : 'delayed',
-      message: isAvailable ? 'Product ready for pickup' : 'Product not available, pickup will be rescheduled',
+      message: isAvailable
+        ? 'Product ready for pickup'
+        : 'Product not available, pickup will be rescheduled',
       data: formatRide(req, ride.toObject())
     });
 

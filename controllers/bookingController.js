@@ -1,6 +1,6 @@
 const Booking = require('../models/booking');
 const Vendor = require('../models/vendor');
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
 // Helper to convert filename to live URL
 const getLiveUrl = (req, filename) => {
@@ -19,60 +19,104 @@ const getLiveUrl = (req, filename) => {
 // ---------- CREATE BOOKING ----------
 exports.createBooking = async (req, res) => {
   try {
+    console.log("req.body:", req.body);
+
     const { user_id, product_id, vendor_id, shipping_address_id, pickup_date } = req.body;
 
+    // Required fields check
     if (!user_id || !product_id || !vendor_id || !shipping_address_id) {
       return res.status(400).json({
-        status: 'error',
-        message: 'user_id, product_id, vendor_id, and shipping_address_id are required'
+        status: "error",
+        message: "user_id, product_id, vendor_id, and shipping_address_id are required",
       });
     }
 
+    // Validate IDs
     const ids = { user_id, product_id, vendor_id, shipping_address_id };
     for (const [key, value] of Object.entries(ids)) {
       if (!mongoose.Types.ObjectId.isValid(value)) {
-        return res.status(400).json({ status: 'error', message: `${key} is not a valid ID` });
+        return res.status(400).json({ status: "error", message: `${key} is not a valid ID` });
       }
     }
 
+    // Parse pickup date
     let baseDate = pickup_date ? new Date(pickup_date) : new Date();
     if (isNaN(baseDate.getTime())) {
-      return res.status(400).json({ status: 'error', message: 'pickup_date is invalid. Use ISO format' });
+      return res.status(400).json({
+        status: "error",
+        message: "pickup_date is invalid. Use ISO format",
+      });
     }
 
+    // Get vendor
     const vendor = await Vendor.findById(vendor_id);
-    if (!vendor) return res.status(404).json({ status: 'error', message: 'Vendor not found' });
+    if (!vendor)
+      return res.status(404).json({ status: "error", message: "Vendor not found" });
 
-    const isAvailable = vendor.available_products.some(p => p.toString() === product_id.toString());
+    // ⭐ Check availability using vendor.inventory ⭐
+    const productEntry = vendor.inventory.find(
+      (item) => item.product.toString() === product_id.toString()
+    );
+
+    const isAvailable = productEntry && productEntry.available_stock > 0;
+
+    // Delay logic based on availability
     const delayed = !isAvailable;
-    const finalPickupDate = delayed ? new Date(baseDate.getTime() + 24*60*60*1000) : baseDate;
-    const status = isAvailable ? 'ready' : 'delayed';
+    const finalPickupDate = delayed
+      ? new Date(baseDate.getTime() + 24 * 60 * 60 * 1000) // +1 day
+      : baseDate;
 
-    const booking = new Booking({ user_id, product_id, vendor_id, shipping_address_id, status, pickup_date: finalPickupDate });
+    const status = isAvailable ? "ready" : "delayed";
+
+    // Create booking
+    const booking = new Booking({
+      user_id,
+      product_id,
+      vendor_id,
+      shipping_address_id,
+      status,
+      pickup_date: finalPickupDate,
+    });
+
     await booking.save();
 
-    const formattedDate = finalPickupDate.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', weekday:'long', year:'numeric', month:'long', day:'numeric'});
+    // Format pickup date
+    const formattedDate = finalPickupDate.toLocaleString("en-IN", {
+      timeZone: "Asia/Kolkata",
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+
     const message = delayed
-      ? `Product not currently available. Your bike can be picked up on ${formattedDate}.`
-      : `Booking confirmed! 🎉 You can take your bike on ${formattedDate}.`;
+      ? `Product currently unavailable. Pickup will be available on ${formattedDate}.`
+      : `Booking confirmed! 🎉 Pickup on ${formattedDate}.`;
 
-    // populate product to get image
-    await booking.populate('product_id');
+    // Populate product
+    await booking.populate("product_id");
 
-    // convert product image to live URL
-    if (booking.product_id) booking.product_id.image_url = getLiveUrl(req, booking.product_id.image_url);
+    // Convert image to URL
+    if (booking.product_id?.image_url) {
+      booking.product_id.image_url = getLiveUrl(req, booking.product_id.image_url);
+    }
 
-    res.status(201).json({
-      status: 'success',
+    return res.status(201).json({
+      status: "success",
       message,
       isAvailable,
       delayed,
-      data: booking
+      data: booking,
     });
   } catch (err) {
-    res.status(500).json({ status: 'error', message: 'Internal server error' });
+    console.error("CREATE BOOKING ERROR:", err);
+    return res.status(500).json({
+      status: "error",
+      message: err.message || "Internal server error",
+    });
   }
 };
+
 
 // ---------- GET ALL BOOKINGS ----------
 exports.getAllBookings = async (req, res) => {
@@ -156,21 +200,44 @@ exports.deleteBooking = async (req, res) => {
 // ---------- CHECK BOOKING AVAILABILITY ----------
 exports.checkBookingAvailability = async (req, res) => {
   try {
-    const booking = await Booking.findById(req.params.id).populate('vendor_id product_id');
-    if (!booking) return res.status(404).json({ status: 'error', message: 'Booking not found' });
+    const booking = await Booking.findById(req.params.id)
+      .populate('vendor_id product_id');
 
-    const vendor = await Vendor.findById(booking.vendor_id);
-    const isAvailable = vendor.available_products.some(p => p.toString() === booking.product_id._id.toString());
+    if (!booking) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Booking not found'
+      });
+    }
 
-    if (booking.product_id) booking.product_id.image_url = getLiveUrl(req, booking.product_id.image_url);
+    const vendor = booking.vendor_id;
+    const productId = booking.product_id._id.toString();
+
+    // ⭐ FIXED INVENTORY LOGIC ⭐
+    const productEntry = vendor.inventory.find(
+      item => item.product.toString() === productId
+    );
+
+    const isAvailable = productEntry && productEntry.available_stock > 0;
+
+    // Update image URL
+    if (booking.product_id) {
+      booking.product_id.image_url = getLiveUrl(req, booking.product_id.image_url);
+    }
 
     res.json({
       status: 'success',
       availability: isAvailable ? 'ready' : 'delayed',
-      message: isAvailable ? 'Product ready for pickup' : 'Product not available, pickup will be rescheduled',
+      message: isAvailable
+        ? 'Product ready for pickup'
+        : 'Product not available, pickup will be rescheduled',
       data: booking
     });
+
   } catch (err) {
-    res.status(500).json({ status: 'error', message: err.message });
+    res.status(500).json({
+      status: 'error',
+      message: err.message
+    });
   }
 };
