@@ -161,16 +161,29 @@ exports.verifyOTP = async (req, res) => {
    ========================================================== */
 exports.resendOTP = async (req, res) => {
   try {
-    const { email } = req.body;
-    if (!email) {
+    const { phone } = req.body;
+
+    if (!phone) {
       return res.status(400).json({
         status: "error",
         code: 400,
-        message: "Email is required",
+        message: "Phone number is required",
+      });
+    }
+    // New
+
+    // ❌ Do NOT resend OTP if already verified
+    const existingUser = await User.findOne({ phone });
+    if (existingUser) {
+      return res.status(400).json({
+        status: "error",
+        code: 400,
+        message: "User already verified. Please login.",
       });
     }
 
-    const tempUser = await TempUser.findOne({ email });
+    // Check TempUser
+    const tempUser = await TempUser.findOne({ phone });
     if (!tempUser) {
       return res.status(404).json({
         status: "error",
@@ -179,12 +192,14 @@ exports.resendOTP = async (req, res) => {
       });
     }
 
-    const otp = generateOTP();
+    // Generate new OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
     tempUser.otp = otp;
     tempUser.otpExpires = Date.now() + 10 * 60 * 1000;
     await tempUser.save();
 
-    await sendWhatsappOTP(tempUser.phone, otp);
+    // Send WhatsApp OTP
+    await sendWhatsappOTP(phone, otp);
 
     return res.status(200).json({
       status: "success",
