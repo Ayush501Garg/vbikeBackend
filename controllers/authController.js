@@ -2,14 +2,16 @@ const User = require("../models/User");
 const TempUser = require("../models/TempUser");
 const bcrypt = require("bcryptjs");
 const { generateToken } = require("../utils/jwt");
-const sendOTPEmail = require("../utils/sendEmail");
+
+// NEW IMPORT
+const sendWhatsappOTP = require("../utils/sendWhatsappOTP");
 
 // Generate 6-digit OTP
 const generateOTP = () =>
   Math.floor(100000 + Math.random() * 900000).toString();
 
 /* ==========================================================
-   🟢 SIGNUP — Create Temp User and Send OTP
+   🟢 SIGNUP — Create Temp User and Send OTP via WHATSAPP
    ========================================================== */
 exports.signup = async (req, res) => {
   try {
@@ -23,7 +25,6 @@ exports.signup = async (req, res) => {
       });
     }
 
-    // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({
@@ -33,12 +34,11 @@ exports.signup = async (req, res) => {
       });
     }
 
-    // Delete old temp entry (if exists)
     await TempUser.deleteOne({ email });
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const otp = generateOTP();
-    const otpExpires = Date.now() + 10 * 60 * 1000; // 10 mins
+    const otpExpires = Date.now() + 10 * 60 * 1000;
 
     const tempUser = await TempUser.create({
       name,
@@ -50,31 +50,30 @@ exports.signup = async (req, res) => {
       role: role || "user",
     });
 
-    // ✅ Try sending OTP email
     try {
-      await sendOTPEmail(email, otp);// ✅ Success response
-    return res.status(201).json({
-      status: "success",
-      code: 201,
-      message: "OTP sent to email. Please verify.",
-      otp: otp, // optional: remove in production
-      data: { email: tempUser.email },
-    });
+      // SEND OTP to WhatsApp
+      await sendWhatsappOTP(phone, otp);
 
-    } catch (emailError) {
-      console.error("Failed to send OTP email:", emailError);
+      return res.status(201).json({
+        status: "success",
+        code: 201,
+        message: "OTP sent to WhatsApp. Please verify.",
+        otp: otp, // REMOVE in production
+        data: { phone: tempUser.phone },
+      });
 
-      // Clean up the temp user if email sending fails
+    } catch (whError) {
+      console.error("Failed to send WhatsApp OTP:", whError);
+
       await TempUser.deleteOne({ email });
 
       return res.status(400).json({
         status: "error",
         code: 400,
-        message: "Email incorrect or unable to send OTP. Please check your email address.",
+        message: "Phone number incorrect or unable to send WhatsApp OTP.",
       });
     }
 
-    
   } catch (err) {
     console.error("Signup Error:", err);
     return res.status(500).json({
@@ -87,7 +86,7 @@ exports.signup = async (req, res) => {
 
 
 /* ==========================================================
-   🟣 VERIFY OTP — Move from TempUser to User
+   🟣 VERIFY OTP — SAME LOGIC
    ========================================================== */
 exports.verifyOTP = async (req, res) => {
   try {
@@ -118,7 +117,6 @@ exports.verifyOTP = async (req, res) => {
       });
     }
 
-    // ✅ Create permanent user
     const newUser = await User.create({
       name: tempUser.name,
       email: tempUser.email,
@@ -128,20 +126,16 @@ exports.verifyOTP = async (req, res) => {
       isVerified: true,
     });
 
-    // ❗ Create token after user is created
     const token = generateToken(newUser._id);
-
     newUser.token = token;
     await newUser.save();
 
-    // Delete temporary user
     await TempUser.deleteOne({ _id: tempUser._id });
 
-    // ✅ Return login-like response
     return res.status(200).json({
       status: "success",
       code: 200,
-      message: "Email verified successfully",
+      message: "WhatsApp OTP verified successfully",
       user: {
         userId: newUser._id,
         name: newUser.name,
@@ -161,8 +155,9 @@ exports.verifyOTP = async (req, res) => {
   }
 };
 
+
 /* ==========================================================
-   🟡 RESEND OTP
+   🟡 RESEND OTP — via WhatsApp
    ========================================================== */
 exports.resendOTP = async (req, res) => {
   try {
@@ -189,14 +184,15 @@ exports.resendOTP = async (req, res) => {
     tempUser.otpExpires = Date.now() + 10 * 60 * 1000;
     await tempUser.save();
 
-    await sendOTPEmail(email, otp);
+    await sendWhatsappOTP(tempUser.phone, otp);
 
     return res.status(200).json({
       status: "success",
       code: 200,
-      message: "New OTP sent to email",
-      data: { email: tempUser.email },
+      message: "New OTP sent to WhatsApp",
+      data: { phone: tempUser.phone },
     });
+
   } catch (err) {
     console.error("Resend OTP Error:", err);
     return res.status(500).json({
@@ -207,19 +203,17 @@ exports.resendOTP = async (req, res) => {
   }
 };
 
+
 /* ==========================================================
-   🔵 LOGIN — Supports Role Validation
+   🔵 LOGIN — SAME
    ========================================================== */
 exports.login = async (req, res) => {
   try {
     let { email, password, role } = req.body;
 
-    // ✅ If frontend doesn’t send role, default it to "user"
     if (!role) {
       role = "user";
     }
-
-    console.log("role",role);
 
     const user = await User.findOne({ email });
     if (!user) {
@@ -243,11 +237,10 @@ exports.login = async (req, res) => {
       return res.status(403).json({
         status: "error",
         code: 403,
-        message: "Please verify your email first",
+        message: "Please verify your WhatsApp OTP first",
       });
     }
 
-    // ✅ Check role (if role mismatch, reject)
     if (role && user.role !== role) {
       return res.status(403).json({
         status: "error",
@@ -256,12 +249,10 @@ exports.login = async (req, res) => {
       });
     }
 
-    // ✅ Generate JWT token
     const token = generateToken(user._id);
     user.token = token;
     await user.save();
 
-    // ✅ Send role-based login message
     let message = "User login successful";
     if (user.role === "admin") message = "Admin login successful";
     if (user.role === "vendor") message = "Vendor login successful";
@@ -290,21 +281,17 @@ exports.login = async (req, res) => {
 };
 
 
-   // commit
 /* ==========================================================
-   ⚙️ USER CRUD OPERATIONS (Role-Based)
+   ⚙️ CRUD + ROLE (UNCHANGED)
    ========================================================== */
-
-// 🟢 Get all users — fetch by role from body
 exports.getAllUsers = async (req, res) => {
   try {
     const { role } = req.body;
-
     if (!role) {
       return res.status(400).json({
         status: "error",
         code: 400,
-        message: "Role is required in request body",
+        message: "Role is required",
       });
     }
 
@@ -335,11 +322,9 @@ exports.getAllUsers = async (req, res) => {
   }
 };
 
-// 🟣 Get user by ID
 exports.getUserById = async (req, res) => {
   try {
-    const { id } = req.params;
-    const user = await User.findById(id).select("-password");
+    const user = await User.findById(req.params.id).select("-password");
 
     if (!user) {
       return res.status(404).json({
@@ -354,6 +339,7 @@ exports.getUserById = async (req, res) => {
       code: 200,
       data: user,
     });
+
   } catch (err) {
     console.error("Get User Error:", err);
     res.status(500).json({
@@ -364,13 +350,9 @@ exports.getUserById = async (req, res) => {
   }
 };
 
-// 🟡 Update user (self or admin)
 exports.updateUser = async (req, res) => {
   try {
-    const { id } = req.params;
-    const updates = req.body;
-
-    const updated = await User.findByIdAndUpdate(id, updates, {
+    const updated = await User.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
     }).select("-password");
 
@@ -398,11 +380,9 @@ exports.updateUser = async (req, res) => {
   }
 };
 
-// 🔴 Delete user — only admin
 exports.deleteUser = async (req, res) => {
   try {
-    const { id } = req.params;
-    const deleted = await User.findByIdAndDelete(id);
+    const deleted = await User.findByIdAndDelete(req.params.id);
 
     if (!deleted) {
       return res.status(404).json({
@@ -417,6 +397,7 @@ exports.deleteUser = async (req, res) => {
       code: 200,
       message: "User deleted successfully",
     });
+
   } catch (err) {
     console.error("Delete User Error:", err);
     res.status(500).json({
@@ -427,15 +408,11 @@ exports.deleteUser = async (req, res) => {
   }
 };
 
-/* ==========================================================
-   🔵 ADMIN — Update User Role
-   ========================================================== */
 exports.updateUserRole = async (req, res) => {
   try {
-    const { id } = req.params;
     const { role } = req.body;
-
     const allowedRoles = ["user", "vendor", "admin"];
+
     if (!allowedRoles.includes(role)) {
       return res.status(400).json({
         status: "error",
@@ -444,9 +421,11 @@ exports.updateUserRole = async (req, res) => {
       });
     }
 
-    const user = await User.findByIdAndUpdate(id, { role }, { new: true }).select(
-      "-password"
-    );
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { role },
+      { new: true }
+    ).select("-password");
 
     if (!user) {
       return res.status(404).json({
@@ -462,6 +441,7 @@ exports.updateUserRole = async (req, res) => {
       message: "User role updated successfully",
       data: user,
     });
+
   } catch (err) {
     console.error("Update Role Error:", err);
     res.status(500).json({
