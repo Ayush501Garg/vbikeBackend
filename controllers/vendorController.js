@@ -1,11 +1,20 @@
 const Vendor = require("../models/vendor");
 const Product = require("../models/product");
 const geocodeAddress = require("../utils/geocode");
+const path = require("path");
 
+// ------------------------------
+// LIVE URL HELPERS
+// ------------------------------
+const getLiveUrl = (req, filename) =>
+  filename ? `${req.protocol}://${req.get("host")}/${filename}` : null;
 
-// ----------------------------------------------------
+const getLiveUrls = (req, files) =>
+  files?.length ? files.map(f => getLiveUrl(req, f)) : [];
+
+// ------------------------------
 // CREATE VENDOR
-// ----------------------------------------------------
+// ------------------------------
 exports.createVendor = async (req, res) => {
   try {
     const {
@@ -62,40 +71,61 @@ exports.createVendor = async (req, res) => {
   }
 };
 
+// ------------------------------
+// FORMAT vendor.inventory (add live URLs)
+// ------------------------------
+const formatVendorProducts = (req, vendorObj) => {
+  vendorObj.inventory = vendorObj.inventory.map(item => {
+    if (item.product) {
+      item.product.image_url = getLiveUrl(req, item.product.image_url);
+      item.product.thumbnails = getLiveUrls(req, item.product.thumbnails);
+    }
+    return item;
+  });
+  return vendorObj;
+};
 
-
-// ----------------------------------------------------
-// GET ALL VENDORS WITH POPULATED PRODUCTS
-// ----------------------------------------------------
+// ------------------------------
+// GET ALL VENDORS (WITH LIVE IMAGE URL)
+// ------------------------------
 exports.getVendors = async (req, res) => {
   try {
     const vendors = await Vendor.find().populate("inventory.product");
-    res.json({ status: "success", data: vendors });
+
+    const formatted = vendors.map(vendor => {
+      const vObj = vendor.toObject();
+      return formatVendorProducts(req, vObj);
+    });
+
+    res.json({ status: "success", data: formatted });
   } catch (err) {
     res.status(500).json({ status: "error", message: err.message });
   }
 };
 
-
-
-// ----------------------------------------------------
+// ------------------------------
 // GET SINGLE VENDOR
-// ----------------------------------------------------
+// ------------------------------
 exports.getVendorById = async (req, res) => {
   try {
-    const vendor = await Vendor.findById(req.params.id).populate("inventory.product");
-    if (!vendor) return res.status(404).json({ status: "error", message: "Vendor not found" });
-    res.json({ status: "success", data: vendor });
+    const vendor = await Vendor.findById(req.params.id)
+      .populate("inventory.product");
+
+    if (!vendor)
+      return res.status(404).json({ status: "error", message: "Vendor not found" });
+
+    const vObj = vendor.toObject();
+    formatVendorProducts(req, vObj);
+
+    res.json({ status: "success", data: vObj });
   } catch (err) {
     res.status(500).json({ status: "error", message: err.message });
   }
 };
 
-
-
-// ----------------------------------------------------
-// UPDATE VENDOR PROFILE
-// ----------------------------------------------------
+// ------------------------------
+// UPDATE VENDOR
+// ------------------------------
 exports.updateVendor = async (req, res) => {
   try {
     const {
@@ -124,7 +154,8 @@ exports.updateVendor = async (req, res) => {
 
     const vendor = await Vendor.findByIdAndUpdate(req.params.id, req.body, { new: true });
 
-    if (!vendor) return res.status(404).json({ status: "error", message: "Vendor not found" });
+    if (!vendor)
+      return res.status(404).json({ status: "error", message: "Vendor not found" });
 
     res.json({ status: "success", message: "Vendor updated successfully", data: vendor });
   } catch (err) {
@@ -132,11 +163,9 @@ exports.updateVendor = async (req, res) => {
   }
 };
 
-
-
-// ----------------------------------------------------
+// ------------------------------
 // DELETE VENDOR
-// ----------------------------------------------------
+// ------------------------------
 exports.deleteVendor = async (req, res) => {
   try {
     const vendor = await Vendor.findByIdAndDelete(req.params.id);
@@ -149,31 +178,25 @@ exports.deleteVendor = async (req, res) => {
   }
 };
 
-
-
-// ----------------------------------------------------
+// ------------------------------
 // ADD PRODUCT TO VENDOR INVENTORY
-// ----------------------------------------------------
+// ------------------------------
 exports.addProductToInventory = async (req, res) => {
   try {
     const { vendorId, product, assigned_stock } = req.body;
 
-    // 1. Fetch product
     const productData = await Product.findById(product);
     if (!productData) return res.status(404).json({ message: "Product not found" });
 
-    // 2. Check warehouse stock
     if (assigned_stock > productData.stock_quantity) {
       return res.status(400).json({
         message: `Only ${productData.stock_quantity} units available in warehouse`
       });
     }
 
-    // 3. Fetch vendor
     const vendor = await Vendor.findById(vendorId);
     if (!vendor) return res.status(404).json({ message: "Vendor not found" });
 
-    // 4. Check if already exists
     const existing = vendor.inventory.find(item => item.product.toString() === product);
     if (existing) {
       return res.status(400).json({
@@ -181,11 +204,9 @@ exports.addProductToInventory = async (req, res) => {
       });
     }
 
-    // 5. Deduct warehouse stock
     productData.stock_quantity -= assigned_stock;
     await productData.save();
 
-    // 6. Add into vendor
     vendor.inventory.push({
       product,
       assigned_stock,
@@ -201,12 +222,9 @@ exports.addProductToInventory = async (req, res) => {
   }
 };
 
-
-
-// ----------------------------------------------------
-// UPDATE INVENTORY (ADD MORE STOCK)
-// assigned_stock = "how much more to add"
-// ----------------------------------------------------
+// ------------------------------
+// UPDATE INVENTORY
+// ------------------------------
 exports.updateInventory = async (req, res) => {
   try {
     const { vendorId, product, assigned_stock, sold_stock } = req.body;
@@ -222,35 +240,27 @@ exports.updateInventory = async (req, res) => {
       return res.status(404).json({ message: "Product not in vendor inventory" });
     }
 
-    // currently assigned to vendor
     const oldAssigned = item.assigned_stock;
-
-    // user means "add this much more"
     const addedAmount = assigned_stock ?? 0;
 
     if (addedAmount < 0)
       return res.status(400).json({ message: "assigned_stock must be positive" });
 
-    // check warehouse stock
     if (addedAmount > productData.stock_quantity) {
       return res.status(400).json({
         message: `Only ${productData.stock_quantity} units available in warehouse`
       });
     }
 
-    // apply increase
     const newAssigned = oldAssigned + addedAmount;
 
-    // deduct from warehouse
     productData.stock_quantity -= addedAmount;
 
-    // sold stock update
     const newSold = sold_stock ?? item.sold_stock;
     if (newSold > newAssigned) {
       return res.status(400).json({ message: "sold_stock cannot exceed assigned stock" });
     }
 
-    // update vendor inventory
     item.assigned_stock = newAssigned;
     item.sold_stock = newSold;
     item.available_stock = newAssigned - newSold;
@@ -264,12 +274,9 @@ exports.updateInventory = async (req, res) => {
   }
 };
 
-
-
-// ----------------------------------------------------
+// ------------------------------
 // REMOVE PRODUCT FROM INVENTORY
-// → Refund assigned stock back to warehouse
-// ----------------------------------------------------
+// ------------------------------
 exports.removeProductFromInventory = async (req, res) => {
   try {
     const { vendorId, productId } = req.body;
@@ -280,7 +287,6 @@ exports.removeProductFromInventory = async (req, res) => {
     const item = vendor.inventory.find(i => i.product.toString() === productId);
     if (!item) return res.status(404).json({ message: "Product not in inventory" });
 
-    // return unused stock back to warehouse
     const productData = await Product.findById(productId);
     if (productData) {
       productData.stock_quantity += item.available_stock;
@@ -296,22 +302,18 @@ exports.removeProductFromInventory = async (req, res) => {
   }
 };
 
-
-
-// ----------------------------------------------------
-// GET TOTAL ASSIGNED STOCK OF A PRODUCT ACROSS ALL VENDORS
-// ----------------------------------------------------
+// ------------------------------
+// TOTAL ASSIGNED STOCK
+// ------------------------------
 exports.getTotalAssignedStock = async (req, res) => {
   try {
     const { productId } = req.params;
 
-    // Fetch product details
     const product = await Product.findById(productId);
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
     }
 
-    // Fetch all vendors
     const vendors = await Vendor.find();
 
     let totalAssigned = 0;
@@ -330,16 +332,13 @@ exports.getTotalAssignedStock = async (req, res) => {
 
     const remainingInWarehouse = product.stock_quantity;
 
-    const totalSystemQuantity =
-      remainingInWarehouse + totalAssigned;
-
     res.json({
       productId,
       totalAssigned,
       totalSold,
       totalAvailableAtVendors,
       remainingInWarehouse,
-      totalSystemQuantity
+      totalSystemQuantity: totalAssigned + remainingInWarehouse
     });
 
   } catch (err) {
@@ -347,10 +346,9 @@ exports.getTotalAssignedStock = async (req, res) => {
   }
 };
 
-
-// ----------------------------------------------------
-// GET TOTAL STOCK SUMMARY FOR ALL PRODUCTS
-// ----------------------------------------------------
+// ------------------------------
+// TOTAL STOCK SUMMARY
+// ------------------------------
 exports.getAllProductsTotalStock = async (req, res) => {
   try {
     const products = await Product.find();
@@ -395,11 +393,9 @@ exports.getAllProductsTotalStock = async (req, res) => {
   }
 };
 
-
-
-// ----------------------------------------------------
-// NEARBY VENDORS (Haversine)
-// ----------------------------------------------------
+// ------------------------------
+// Haversine
+// ------------------------------
 function deg2rad(deg) {
   return deg * (Math.PI / 180);
 }
@@ -417,18 +413,26 @@ function getDistance(lat1, lon1, lat2, lon2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+// ------------------------------
+// GET NEARBY VENDORS (with live image URLs)
+// ------------------------------
 exports.getNearbyVendors = async (req, res) => {
   try {
     const { lat, lng, radius = 10 } = req.query;
 
-    const vendors = await Vendor.find();
+    const vendors = await Vendor.find().populate("inventory.product");
 
     const near = vendors.filter(v =>
       v.location?.lat &&
       getDistance(lat, lng, v.location.lat, v.location.lng) <= radius
     );
 
-    res.json({ status: "success", count: near.length, data: near });
+    const formatted = near.map(vendor => {
+      const vObj = vendor.toObject();
+      return formatVendorProducts(req, vObj);
+    });
+
+    res.json({ status: "success", count: formatted.length, data: formatted });
   } catch (err) {
     res.status(500).json({ status: "error", message: err.message });
   }
