@@ -3,7 +3,17 @@ const Approval = require("../models/VendorProductApproval");
 // CREATE
 exports.createApproval = async (req, res) => {
   try {
-    const approval = await Approval.create(req.body); // all fields optional
+    const { vendor_id, product_id, vendor_message, admin_message, status, quantity } = req.body;
+
+    const approval = await Approval.create({
+      vendor_id,
+      product_id,
+      vendor_message,
+      admin_message,
+      status,
+      quantity,  // 👈 added field
+    });
+
     res.status(201).json({ status: "success", data: approval });
   } catch (e) {
     res.status(500).json({ status: "error", message: e.message });
@@ -34,7 +44,21 @@ exports.getApprovalById = async (req, res) => {
 // UPDATE
 exports.updateApproval = async (req, res) => {
   try {
-    const updated = await Approval.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const { vendor_id, product_id, vendor_message, admin_message, status, quantity } = req.body;
+
+    const updated = await Approval.findByIdAndUpdate(
+      req.params.id,
+      {
+        vendor_id,
+        product_id,
+        vendor_message,
+        admin_message,
+        status,
+        quantity, // 👈 added field
+      },
+      { new: true }
+    );
+
     if (!updated) return res.status(404).json({ status: "error", message: "Not found" });
     res.json({ status: "success", data: updated });
   } catch (e) {

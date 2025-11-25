@@ -19,6 +19,11 @@ const VendorProductApprovalSchema = new mongoose.Schema({
     type: String,
     default: "",
   },
+  quantity: {
+    type: Number,
+    default: 0,
+    min: 0,
+  },
   status: {
     type: String,
     enum: ["approved", "not_approved"],
