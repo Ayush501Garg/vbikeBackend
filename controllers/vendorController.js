@@ -15,6 +15,9 @@ const getLiveUrls = (req, files) =>
 // ------------------------------
 // CREATE VENDOR
 // ------------------------------
+// ------------------------------
+// CREATE VENDOR (WITH INVENTORY)
+// ------------------------------
 exports.createVendor = async (req, res) => {
   try {
     const {
@@ -27,9 +30,11 @@ exports.createVendor = async (req, res) => {
       phone,
       email,
       opening_hours,
-      rating
+      rating,
+      inventory   // <-- NEW
     } = req.body;
 
+    // Geocode
     const fullAddress = `${address_line}, ${city}, ${state}, ${postal_code}, ${country}`;
     let coordinates = await geocodeAddress(fullAddress);
 
@@ -44,6 +49,46 @@ exports.createVendor = async (req, res) => {
       ? { lat: coordinates[1], lng: coordinates[0] }
       : coordinates;
 
+    // -----------------------------------------
+    // HANDLE INVENTORY AT CREATION
+    // -----------------------------------------
+    let formattedInventory = [];
+
+    if (Array.isArray(inventory) && inventory.length > 0) {
+      for (const item of inventory) {
+        const { product, assigned_stock } = item;
+
+        const productData = await Product.findById(product);
+        if (!productData) {
+          return res.status(404).json({
+            status: "error",
+            message: `Product not found: ${product}`,
+          });
+        }
+
+        if (assigned_stock > productData.stock_quantity) {
+          return res.status(400).json({
+            status: "error",
+            message: `Only ${productData.stock_quantity} units available for product ${productData.name}`
+          });
+        }
+
+        // Deduct stock from warehouse
+        productData.stock_quantity -= assigned_stock;
+        await productData.save();
+
+        formattedInventory.push({
+          product,
+          assigned_stock,
+          sold_stock: 0,
+          available_stock: assigned_stock
+        });
+      }
+    }
+
+    // -----------------------------------------
+    // CREATE VENDOR WITH INVENTORY
+    // -----------------------------------------
     const vendor = new Vendor({
       name,
       address_line,
@@ -56,7 +101,7 @@ exports.createVendor = async (req, res) => {
       opening_hours,
       rating: Number(rating) || 0,
       location: locationObj,
-      inventory: []
+      inventory: formattedInventory   // <-- FINALLY ADDED
     });
 
     await vendor.save();
@@ -70,6 +115,7 @@ exports.createVendor = async (req, res) => {
     res.status(500).json({ status: "error", message: err.message });
   }
 };
+
 
 // ------------------------------
 // FORMAT vendor.inventory (add live URLs)
