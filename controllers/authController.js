@@ -17,6 +17,7 @@ exports.signup = async (req, res) => {
   try {
     const { name, email, phone, password, role } = req.body;
 
+    // Basic validation
     if (!name || !email || !phone || !password) {
       return res.status(400).json({
         status: "error",
@@ -25,6 +26,7 @@ exports.signup = async (req, res) => {
       });
     }
 
+    // Check already registered
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({
@@ -33,6 +35,33 @@ exports.signup = async (req, res) => {
         message: "User already exists",
       });
     }
+
+    // =====================================================
+    // ⭐ CASE 1 → role is provided → DIRECT USER CREATION
+    // =====================================================
+    if (role && role !== "user") {
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      const newUser = await User.create({
+        name,
+        email,
+        phone,
+        password: hashedPassword,
+        role: role,           // Use given role (admin/vendor)
+        isVerified: true,     // Mark verified since no OTP needed
+      });
+
+      return res.status(201).json({
+        status: "success",
+        code: 201,
+        message: "User created successfully without OTP verification.",
+        data: newUser,
+      });
+    }
+
+    // =====================================================
+    // ⭐ CASE 2 → No role or role = "user" → OTP FLOW
+    // =====================================================
 
     await TempUser.deleteOne({ email });
 
@@ -47,7 +76,7 @@ exports.signup = async (req, res) => {
       password: hashedPassword,
       otp,
       otpExpires,
-      role: role || "user",
+      role: "user", // force default user
     });
 
     try {
@@ -63,14 +92,14 @@ exports.signup = async (req, res) => {
       });
 
     } catch (whError) {
-      console.error("Failed to send WhatsApp OTP:", whError);
+      console.error("WhatsApp OTP Error:", whError);
 
       await TempUser.deleteOne({ email });
 
       return res.status(400).json({
         status: "error",
         code: 400,
-        message: "Phone number incorrect or unable to send WhatsApp OTP.",
+        message: "Phone number incorrect or unable to send WhatsApp OTP",
       });
     }
 
@@ -83,6 +112,7 @@ exports.signup = async (req, res) => {
     });
   }
 };
+
 
 
 /* ==========================================================
