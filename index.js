@@ -22,6 +22,7 @@ const vendorRoutes = require('./routes/vendorRoutes');
 const bookingRoutes = require('./routes/bookingRoutes');
 const bookRideRoutes = require('./routes/bookRideRoutes');
 const vendorProductApprovalRoutes = require('./routes/vendorProductApprovalRoutes');
+const featuredOfferRoutes = require('./routes/featuredOfferRoutes');
 
 
 const orderRoutes = require("./routes/orderRoutes");
@@ -133,6 +134,9 @@ app.use('/api/vendors', vendorRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use("/api/bookrides", bookRideRoutes);
 app.use("/api/productApproval", vendorProductApprovalRoutes);
+app.use("/api/featuredOffer", featuredOfferRoutes);
+
+
 // Skip
 app.use("/api/cart", cartRoutes);
 app.use("/api/orders", orderRoutes);
