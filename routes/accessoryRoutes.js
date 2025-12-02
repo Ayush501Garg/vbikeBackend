@@ -13,9 +13,9 @@ router.post(
   handleUploadErrors,
   accessoryController.createAccessory
 );
-
 router.get("/", accessoryController.getAccessories);
-router.get("/category/:categoryId", accessoryController.getAccessoriesByCategory);
+// If in controller you renamed to getAccessoriesByCategoryName
+router.get("/category/:categoryName", accessoryController.getAccessoriesByCategoryName);
 router.get("/:id", accessoryController.getAccessory);
 
 router.put(

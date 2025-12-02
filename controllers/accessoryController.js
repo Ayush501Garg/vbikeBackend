@@ -1,4 +1,5 @@
 const Accessory = require("../models/accessory");
+const AccessoryCategory = require("../models/accessoryCategory");
 const path = require("path");
 const fs = require("fs");
 
@@ -55,13 +56,15 @@ exports.createAccessory = async (req, res) => {
 
     await accessory.save();
 
+    const populated = await Accessory.findById(accessory._id).populate("category_id", "name");
+
     res.status(201).json({
       status: "success",
       message: "Accessory created successfully",
       data: {
-        ...accessory.toObject(),
-        image_url: getLiveUrl(req, accessory.image_url),
-        thumbnails: getLiveUrls(req, accessory.thumbnails)
+        ...populated.toObject(),
+        image_url: getLiveUrl(req, populated.image_url),
+        thumbnails: getLiveUrls(req, populated.thumbnails)
       }
     });
   } catch (err) {
@@ -74,7 +77,9 @@ exports.createAccessory = async (req, res) => {
 // ------------------------------------------------------
 exports.getAccessories = async (req, res) => {
   try {
-    const list = await Accessory.find().select("-__v");
+    const list = await Accessory.find()
+      .select("-__v")
+      .populate("category_id", "name");
 
     const formatted = list.map(a => ({
       ...a.toObject(),
@@ -92,13 +97,16 @@ exports.getAccessories = async (req, res) => {
 };
 
 // ------------------------------------------------------
-// GET ACCESSORIES BY CATEGORY
+// GET ACCESSORIES BY CATEGORY NAME
 // ------------------------------------------------------
-exports.getAccessoriesByCategory = async (req, res) => {
+exports.getAccessoriesByCategoryName = async (req, res) => {
   try {
-    const { categoryId } = req.params;
+    const { categoryName } = req.params;
 
-    const list = await Accessory.find({ category_id: categoryId });
+    const category = await AccessoryCategory.findOne({ name: categoryName });
+    if (!category) return sendError(res, 404, `Category "${categoryName}" not found`);
+
+    const list = await Accessory.find({ category_id: category._id }).populate("category_id", "name");
 
     res.json({
       status: "success",
@@ -118,7 +126,10 @@ exports.getAccessoriesByCategory = async (req, res) => {
 // ------------------------------------------------------
 exports.getAccessory = async (req, res) => {
   try {
-    const accessory = await Accessory.findById(req.params.id).select("-__v");
+    const accessory = await Accessory.findById(req.params.id)
+      .select("-__v")
+      .populate("category_id", "name");
+
     if (!accessory) return sendError(res, 404, "Accessory not found.");
 
     res.json({
@@ -143,7 +154,6 @@ exports.updateAccessory = async (req, res) => {
 
     if (updateData.colors)
       updateData.colors = parseArray(updateData.colors);
-
     if (updateData.features)
       updateData.features = parseArray(updateData.features);
 
@@ -153,39 +163,37 @@ exports.updateAccessory = async (req, res) => {
     // New main image
     if (req.files?.image) {
       const newImg = req.files.image[0].filename;
-
       if (accessory.image_url) {
         const old = path.join(__dirname, "..", "uploads", accessory.image_url);
         if (fs.existsSync(old)) fs.unlinkSync(old);
       }
-
       updateData.image_url = newImg;
     }
 
     // New thumbnails
     if (req.files?.thumbnails) {
       const newThumbs = req.files.thumbnails.map(f => f.filename);
-
       if (accessory.thumbnails?.length) {
         accessory.thumbnails.forEach(file => {
           const filePath = path.join(__dirname, "..", "uploads", file);
           if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
         });
       }
-
       updateData.thumbnails = newThumbs;
     }
 
     Object.assign(accessory, updateData);
     await accessory.save();
 
+    const populated = await Accessory.findById(accessory._id).populate("category_id", "name");
+
     res.json({
       status: "success",
       message: "Accessory updated successfully",
       data: {
-        ...accessory.toObject(),
-        image_url: getLiveUrl(req, accessory.image_url),
-        thumbnails: getLiveUrls(req, accessory.thumbnails)
+        ...populated.toObject(),
+        image_url: getLiveUrl(req, populated.image_url),
+        thumbnails: getLiveUrls(req, populated.thumbnails)
       }
     });
   } catch (err) {
