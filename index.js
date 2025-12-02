@@ -136,7 +136,6 @@ app.use("/api/bookrides", bookRideRoutes);
 app.use("/api/productApproval", vendorProductApprovalRoutes);
 app.use("/api/featuredOffer", featuredOfferRoutes);
 
-// hii
 // Skip
 app.use("/api/cart", cartRoutes);
 app.use("/api/orders", orderRoutes);

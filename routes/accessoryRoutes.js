@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const productController = require("../controllers/productController");
+const accessoryController = require("../controllers/accessoryController");
 
 const { upload, handleUploadErrors } = require("../utils/upload");
 
@@ -11,11 +11,12 @@ router.post(
     { name: "thumbnails", maxCount: 5 }
   ]),
   handleUploadErrors,
-  productController.createProduct
+  accessoryController.createAccessory
 );
 
-router.get("/", productController.getProducts);
-router.get("/:id", productController.getProduct);
+router.get("/", accessoryController.getAccessories);
+router.get("/category/:categoryId", accessoryController.getAccessoriesByCategory);
+router.get("/:id", accessoryController.getAccessory);
 
 router.put(
   "/:id",
@@ -24,9 +25,9 @@ router.put(
     { name: "thumbnails", maxCount: 5 }
   ]),
   handleUploadErrors,
-  productController.updateProduct
+  accessoryController.updateAccessory
 );
 
-router.delete("/:id", productController.deleteProduct);
+router.delete("/:id", accessoryController.deleteAccessory);
 
 module.exports = router;
