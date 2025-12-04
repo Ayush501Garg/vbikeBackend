@@ -25,19 +25,15 @@ const vendorProductApprovalRoutes = require('./routes/vendorProductApprovalRoute
 const featuredOfferRoutes = require('./routes/featuredOfferRoutes');
 const accessoryCategoryRoutes = require('./routes/accessoryCategoryRoutes');
 const accessoryRoutes = require('./routes/accessoryRoutes');
-
+const enquiryRoutes = require('./routes/enquiryRoutes');
 
 const orderRoutes = require("./routes/orderRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
-
 const walletRoutes = require("./routes/walletRoutes");
-
 
 // Import socket module
 const { initSocket, sendToUser } = require('./socket');
 const BikeRegister = require("./models/bikeRegisterModel"); // adjust path
-
-
 
 
 const cors = require('cors');
@@ -58,7 +54,6 @@ app.use((req, res, next) => {
   }
   next();
 });
-
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -121,8 +116,6 @@ app.post("/api/device-data", async (req, res) => {
 const server = http.createServer(app);
 initSocket(server);
 
-// commit 
-
 // Other API routess
 app.use('/api/auth', authRoutes);
 app.use("/api/bike-types", bikeTypeRoutes);
@@ -139,6 +132,7 @@ app.use("/api/productApproval", vendorProductApprovalRoutes);
 app.use("/api/featuredOffer", featuredOfferRoutes);
 app.use("/api/accessory-categories", accessoryCategoryRoutes);
 app.use("/api/accessories", accessoryRoutes);
+app.use("/api/enquiries",enquiryRoutes );
 
 // Skip
 app.use("/api/cart", cartRoutes);
