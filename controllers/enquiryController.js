@@ -35,17 +35,7 @@ exports.getEnquiries = async (req, res) => {
   }
 };
 
-// --------------------- GET SINGLE ---------------------
-exports.getEnquiry = async (req, res) => {
-  try {
-    const data = await Enquiry.findById(req.params.id);
-    if (!data) return sendError(res, 404, "Enquiry not found");
 
-    res.json({ status: "success", data });
-  } catch (err) {
-    sendError(res, 500, err.message);
-  }
-};
 
 // --------------------- UPDATE ---------------------
 exports.updateEnquiry = async (req, res) => {

@@ -9,7 +9,6 @@ router.post("/", enquiryController.createEnquiry);
 router.get("/", enquiryController.getEnquiries);
 
 // Get One
-router.get("/:id", enquiryController.getEnquiry);
 
 // Update
 router.put("/:id", enquiryController.updateEnquiry);

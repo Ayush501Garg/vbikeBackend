@@ -32,7 +32,7 @@ const paymentRoutes = require("./routes/paymentRoutes");
 const walletRoutes = require("./routes/walletRoutes");
 
 // Import socket module
-const { initSocket, sendToUser } = require('./socket');
+const { initSocket, sendToAll } = require('./socket');
 const BikeRegister = require("./models/bikeRegisterModel"); // adjust path
 
 
@@ -81,33 +81,23 @@ app.post("/api/device-data", async (req, res) => {
     const bodyData = req.body;
     console.log("📩 API hit => DeviceID:", deviceId.trim(), "Body:", bodyData);
 
-    // 🔎 Lookup bike in DB
-    const bike = await BikeRegister.findOne({ bikeId: deviceId.trim() });
+    // 🔥 Broadcast to ALL connected sockets
+    sendToAll({ deviceId, body: bodyData });
 
-    if (!bike) {
-      return res.status(404).json({
-        status: "error",
-        message: "Bike not found for this deviceId",
-      });
-    }
-
-    const userId = bike.user_id;
-
-    // 🔥 Emit to all active devices of this user
-    sendToUser(userId, { deviceId, userId, body: bodyData });
-
-    res.status(201).json({
+    return res.status(201).json({
       status: "success",
-      message: "Data sent to user",
-      userId,
+      message: "Data broadcast to all clients",
       deviceId,
       body: bodyData,
     });
+
   } catch (err) {
     console.error("❌ Error in /api/device-data:", err);
     res.status(500).json({ status: "error", message: err.message });
   }
 });
+
+
 
 
 // Vbike backend

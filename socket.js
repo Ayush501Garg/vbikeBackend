@@ -1,8 +1,5 @@
 let io;
 
-// userId -> Set of socketIds (multiple devices per user)
-const users = {};
-
 function initSocket(server) {
   const { Server } = require("socket.io");
   io = new Server(server, {
@@ -10,35 +7,16 @@ function initSocket(server) {
   });
 
   io.on("connection", (socket) => {
-    const userId = socket.handshake.query.userId;
-    if (!userId) return socket.disconnect(true);
-
-    if (!users[userId]) users[userId] = new Set();
-    users[userId].add(socket.id);
-
-    console.log(`✅ User ${userId} connected with socketID: ${socket.id}`);
+    console.log("✅Socket Connected:", socket.id);
 
     socket.on("disconnect", () => {
-      console.log(`❌ Socket ${socket.id} disconnected for user ${userId}`);
-      users[userId].delete(socket.id);
-      if (users[userId].size === 0) delete users[userId];
+      console.log(`❌Socket disconnected: ${socket.id}`);
     });
   });
 }
 
-// 🔥 Send data to all devices of a user
-function sendToUser(userId, data) {
-  if (!users[userId] || users[userId].size === 0) {
-    console.log(`⚠️ No active sockets for user ${userId}`);
-    return;
-  }
-
-  console.log("💥 Sending to user:", userId, "👉 Data:", data);
-
-  users[userId].forEach((socketId) => {
-    console.log("💥💥💥💢💢💢 userId data",data);
-    io.to(socketId).emit("device-data", data);
-  });
+function sendToAll(data) {
+  io.emit("device-data", data); // 🔥 send to ALL connected sockets
 }
 
-module.exports = { initSocket, sendToUser };
+module.exports = { initSocket, sendToAll };
