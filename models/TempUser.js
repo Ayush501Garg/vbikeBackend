@@ -6,7 +6,7 @@ const tempUserSchema = new mongoose.Schema({
   phone: String,
   password: String,
   otp: String,
-  role: { type: String, enum: ["user", "vendor", "admin"], default: "user" }, // ✅
+  role: { type: String, default: "user" }, // ✅
   otpExpires: Date,
 }, { timestamps: true });
 
