@@ -14,14 +14,9 @@ const storage = multer.diskStorage({
     cb(null, uploadPath);
   },
 
+  // 🔥 Save file with EXACT original name
   filename: function (req, file, cb) {
-    const name = (req.body.name || "file")
-      .toLowerCase()
-      .replace(/\s+/g, "-")
-      .replace(/[^a-z0-9\-]/g, "");
-
-    const ext = path.extname(file.originalname);
-    cb(null, `${name}-${Date.now()}${ext}`);
+    cb(null, file.originalname);
   }
 });
 
@@ -30,9 +25,11 @@ const storage = multer.diskStorage({
 // ============================
 const fileFilter = (req, file, cb) => {
   const allowed = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+
   if (!allowed.includes(file.mimetype)) {
     return cb(new Error("Only JPG, JPEG, PNG, or WEBP files allowed"));
   }
+
   cb(null, true);
 };
 
