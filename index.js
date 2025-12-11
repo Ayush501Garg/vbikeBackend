@@ -76,7 +76,7 @@ app.post("/api/device-data", async (req, res) => {
         status: "error",
         message: "Device ID header required",
       });
-    }
+    }1
 
     const bodyData = req.body;
     console.log("📩 API hit => DeviceID:", deviceId.trim(), "Body:", bodyData);
