@@ -1,15 +1,11 @@
 const express = require("express");
 const router = express.Router();
+const multer = require("multer");
+const friendsFamilyController = require("../controllers/friendsFamily");
 
-const upload = require("../middlewares/multer");
-const {
-  createFriendsFamily
-} = require("../controllers/friendsFamily");
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
 
-router.post(
-  "/create",
-  upload.single("or_image"),
-  createFriendsFamily
-);
+router.post("/create", upload.single("or_image"), friendsFamilyController.createFriendsFamily);
 
 module.exports = router;
