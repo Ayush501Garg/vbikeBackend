@@ -8,4 +8,6 @@ const upload = multer({ storage });
 
 router.post("/create", upload.single("or_image"), friendsFamilyController.createFriendsFamily);
 
+router.get("/", friendsFamilyController.getFriendsFamily);
+
 module.exports = router;

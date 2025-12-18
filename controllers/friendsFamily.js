@@ -35,3 +35,15 @@ exports.createFriendsFamily = async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 };
+
+
+
+exports.getFriendsFamily = async (req, res) => {
+  try {
+    const allData = await FriendsFamily.find().sort({ createdAt: -1 }); // latest first
+    res.json({ success: true, data: allData });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
