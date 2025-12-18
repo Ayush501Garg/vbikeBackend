@@ -31,6 +31,11 @@ const orderRoutes = require("./routes/orderRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
 const walletRoutes = require("./routes/walletRoutes");
 
+const friendsFamilyRoutes = require("./routes/friendsFamily");
+
+
+
+
 // Import socket module
 const { initSocket, sendToAll } = require('./socket');
 const BikeRegister = require("./models/bikeRegisterModel"); // adjust path
@@ -64,6 +69,8 @@ connectDB();
 
 // Test route
 app.get('/', (req, res) => res.send("Backend Running with Socket.IO ✅"));
+
+
 
 // ✅ POST /api/device-data
 
@@ -129,6 +136,8 @@ app.use("/api/cart", cartRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/wallet", walletRoutes);
+
+app.use("/api/friends-family", friendsFamilyRoutes);
 
 
 // Start server
