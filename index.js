@@ -32,6 +32,14 @@ const paymentRoutes = require("./routes/paymentRoutes");
 const walletRoutes = require("./routes/walletRoutes");
 
 const friendsFamilyRoutes = require("./routes/friendsFamily");
+const couponRoutes = require("./routes/couponRoutes");
+const accessoryCartRoutes = require("./routes/accessoryCartRoutes");
+const accessoryWishlistRoutes = require("./routes/accessoryWishlistRoutes");
+const batteryWishlistRoute = require("./routes/batteryWishlistRoutes");
+const serviceBookingRoute = require("./routes/serviceBookingRoutes");
+
+
+
 
 
 
@@ -138,7 +146,18 @@ app.use("/api/payments", paymentRoutes);
 app.use("/api/wallet", walletRoutes);
 
 app.use("/api/friends-family", friendsFamilyRoutes);
+app.use("/api/coupon", couponRoutes);
 
+app.use("/api/battery", require("./routes/batteryRoutes"));
+app.use("/api/battery-category", require("./routes/batteryCategoryRoutes"));
+app.use("/api/battery-cart", require("./routes/batteryCartRoutes"));
+app.use("/api/accessory-cart", accessoryCartRoutes);
+app.use("/api/accessory-wishlist", accessoryWishlistRoutes);
+app.use("/api/battery-wishlist", batteryWishlistRoute);
+app.use("/api/service-booking", serviceBookingRoute);
 
 // Start server
 server.listen(8000, () => console.log("🚀 Server running on port 8000"));
+
+
+
