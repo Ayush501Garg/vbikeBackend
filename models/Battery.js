@@ -3,14 +3,14 @@ const mongoose = require("mongoose");
 const batterySchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
-    description: { type: String },
+    description: String,
 
-    capacity: { type: String, required: true }, // 48V 30Ah
-    range_km: { type: Number },
-    charging_time_hours: { type: Number },
+    capacity: { type: String, required: true },
+    range_km: Number,
+    charging_time_hours: Number,
 
     price: { type: Number, required: true },
-    mrp: { type: Number },
+    mrp: Number,
 
     category_id: {
       type: mongoose.Schema.Types.ObjectId,
@@ -19,13 +19,12 @@ const batterySchema = new mongoose.Schema(
     },
 
     available_stock: { type: Number, default: 0 },
-
-    warranty_months: { type: Number },
-    weight_kg: { type: Number },
+    warranty_months: Number,
+    weight_kg: Number,
 
     features: [{ type: String }],
 
-    image_url: { type: String },
+    image_url: String,
     thumbnails: [{ type: String }],
 
     is_active: { type: Boolean, default: true }

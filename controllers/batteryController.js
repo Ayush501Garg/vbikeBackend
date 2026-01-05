@@ -1,38 +1,44 @@
-
-/* CREATE */
 const Battery = require("../models/Battery");
 
-/* CREATE */
 exports.createBattery = async (req, res) => {
   try {
+    // FILES
     if (req.files?.image) {
-      req.body.image_url = `/uploads/${req.files.image[0].originalname}`;
+      req.body.image_url = `/uploads/${req.files.image[0].filename}`;
     }
 
     if (req.files?.thumbnails) {
       req.body.thumbnails = req.files.thumbnails.map(
-        file => `/uploads/${file.originalname}`
+        f => `/uploads/${f.filename}`
       );
     }
 
-    const battery = await Battery.create(req.body);
+    // TYPE CASTING
+    req.body.price = Number(req.body.price);
+    req.body.mrp = Number(req.body.mrp);
+    req.body.range_km = Number(req.body.range_km);
+    req.body.charging_time_hours = Number(req.body.charging_time_hours);
+    req.body.available_stock = Number(req.body.available_stock);
+    req.body.warranty_months = Number(req.body.warranty_months);
+    req.body.weight_kg = Number(req.body.weight_kg);
+    req.body.is_active = req.body.is_active === "true";
 
+    const battery = await Battery.create(req.body);
     res.status(201).json({ success: true, data: battery });
   } catch (err) {
     res.status(400).json({ success: false, error: err.message });
   }
 };
 
-/* UPDATE */
 exports.updateBattery = async (req, res) => {
   try {
     if (req.files?.image) {
-      req.body.image_url = `/uploads/${req.files.image[0].originalname}`;
+      req.body.image_url = `/uploads/${req.files.image[0].filename}`;
     }
 
     if (req.files?.thumbnails) {
       req.body.thumbnails = req.files.thumbnails.map(
-        file => `/uploads/${file.originalname}`
+        f => `/uploads/${f.filename}`
       );
     }
 
@@ -42,8 +48,9 @@ exports.updateBattery = async (req, res) => {
       { new: true, runValidators: true }
     );
 
-    if (!battery)
-      return res.status(404).json({ message: "Battery not found" });
+    if (!battery) {
+      return res.status(404).json({ success: false, message: "Battery not found" });
+    }
 
     res.json({ success: true, data: battery });
   } catch (err) {
@@ -51,47 +58,26 @@ exports.updateBattery = async (req, res) => {
   }
 };
 
-
-/* GET ALL */
 exports.getAllBatteries = async (req, res) => {
-  try {
-    const batteries = await Battery.find()
-      .populate("category_id", "name")
-      .sort({ createdAt: -1 });
+  const batteries = await Battery.find()
+    .populate("category_id", "name")
+    .sort({ createdAt: -1 });
 
-    res.json({ success: true, count: batteries.length, data: batteries });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
+  res.json({ success: true, data: batteries });
 };
 
-/* GET SINGLE */
 exports.getBatteryById = async (req, res) => {
-  try {
-    const battery = await Battery.findById(req.params.id)
-      .populate("category_id", "name");
+  const battery = await Battery.findById(req.params.id)
+    .populate("category_id", "name");
 
-    if (!battery)
-      return res.status(404).json({ message: "Battery not found" });
-
-    res.json({ success: true, data: battery });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+  if (!battery) {
+    return res.status(404).json({ success: false, message: "Battery not found" });
   }
+
+  res.json({ success: true, data: battery });
 };
 
-
-
-/* DELETE */
 exports.deleteBattery = async (req, res) => {
-  try {
-    const battery = await Battery.findByIdAndDelete(req.params.id);
-
-    if (!battery)
-      return res.status(404).json({ message: "Battery not found" });
-
-    res.json({ success: true, message: "Battery deleted successfully" });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
+  await Battery.findByIdAndDelete(req.params.id);
+  res.json({ success: true, message: "Battery deleted" });
 };
