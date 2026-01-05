@@ -1,7 +1,8 @@
 const ServiceBooking = require("../models/ServiceBooking");
+const VendorServiceSlot = require("../models/VendorServiceSlot");
 const mongoose = require("mongoose");
 
-/* ===== Service Price Map (VBike Fixed Services) ===== */
+/* ===== Service Price Map ===== */
 const SERVICE_PRICES = {
   full_service: 499,
   washing: 99,
@@ -12,19 +13,37 @@ const SERVICE_PRICES = {
 /* ================= CREATE BOOKING ================= */
 exports.createBooking = async (req, res) => {
   try {
-    const { user_id, service_type, booking_date, booking_time, address } = req.body;
+    const {
+      user_id,
+      vendor_id,
+      service_type,
+      booking_date,
+      booking_time,
+      address
+    } = req.body;
 
-    if (!user_id || !service_type || !booking_date || !booking_time || !address) {
+    /* ===== Validation ===== */
+    if (
+      !user_id ||
+      !vendor_id ||
+      !service_type ||
+      !booking_date ||
+      !booking_time ||
+      !address
+    ) {
       return res.status(400).json({
         success: false,
         message: "All fields are required"
       });
     }
 
-    if (!mongoose.Types.ObjectId.isValid(user_id)) {
+    if (
+      !mongoose.Types.ObjectId.isValid(user_id) ||
+      !mongoose.Types.ObjectId.isValid(vendor_id)
+    ) {
       return res.status(400).json({
         success: false,
-        message: "Invalid user id"
+        message: "Invalid user or vendor id"
       });
     }
 
@@ -35,8 +54,42 @@ exports.createBooking = async (req, res) => {
       });
     }
 
+    /* ===== Vendor Slot Config ===== */
+    const vendorSlot = await VendorServiceSlot.findOne({ vendor_id });
+
+    if (!vendorSlot) {
+      return res.status(404).json({
+        success: false,
+        message: "Vendor slot configuration not found"
+      });
+    }
+
+    if (!vendorSlot.service_types.includes(service_type)) {
+      return res.status(400).json({
+        success: false,
+        message: "Service not provided by vendor"
+      });
+    }
+
+    /* ===== Slot Capacity Check ===== */
+    const bookedCount = await ServiceBooking.countDocuments({
+      vendor_id,
+      booking_date,
+      booking_time,
+      status: { $ne: "cancelled" }
+    });
+
+    if (bookedCount >= vendorSlot.max_service_per_slot) {
+      return res.status(400).json({
+        success: false,
+        message: "This time slot is fully booked"
+      });
+    }
+
+    /* ===== Create Booking ===== */
     const booking = await ServiceBooking.create({
       user_id,
+      vendor_id,
       service_type,
       booking_date,
       booking_time,
@@ -51,16 +104,27 @@ exports.createBooking = async (req, res) => {
     });
 
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
   }
 };
 
 /* ================= GET USER BOOKINGS ================= */
 exports.getUserBookings = async (req, res) => {
   try {
-    const bookings = await ServiceBooking.find({
-      user_id: req.params.userId
-    }).sort({ createdAt: -1 });
+    const { userId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid user id"
+      });
+    }
+
+    const bookings = await ServiceBooking.find({ user_id: userId })
+      .sort({ createdAt: -1 });
 
     res.status(200).json({
       success: true,
@@ -69,14 +133,26 @@ exports.getUserBookings = async (req, res) => {
     });
 
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
   }
 };
 
 /* ================= CANCEL BOOKING ================= */
 exports.cancelBooking = async (req, res) => {
   try {
-    const booking = await ServiceBooking.findById(req.params.bookingId);
+    const { bookingId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(bookingId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid booking id"
+      });
+    }
+
+    const booking = await ServiceBooking.findById(bookingId);
 
     if (!booking) {
       return res.status(404).json({
@@ -90,10 +166,13 @@ exports.cancelBooking = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: "Booking cancelled"
+      message: "Booking cancelled successfully"
     });
 
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
   }
 };

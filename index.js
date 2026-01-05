@@ -37,6 +37,7 @@ const accessoryCartRoutes = require("./routes/accessoryCartRoutes");
 const accessoryWishlistRoutes = require("./routes/accessoryWishlistRoutes");
 const batteryWishlistRoute = require("./routes/batteryWishlistRoutes");
 const serviceBookingRoute = require("./routes/serviceBookingRoutes");
+const vendorServiceSlot = require("./routes/vendorServiceSlotRoutes");
 
 
 
@@ -155,6 +156,7 @@ app.use("/api/accessory-cart", accessoryCartRoutes);
 app.use("/api/accessory-wishlist", accessoryWishlistRoutes);
 app.use("/api/battery-wishlist", batteryWishlistRoute);
 app.use("/api/service-booking", serviceBookingRoute);
+app.use("/api/vendor-slot", vendorServiceSlot);
 
 // Start server
 server.listen(8000, () => console.log("🚀 Server running on port 8000"));

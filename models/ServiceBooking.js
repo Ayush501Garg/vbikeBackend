@@ -8,14 +8,15 @@ const serviceBookingSchema = new mongoose.Schema(
       required: true
     },
 
+    vendor_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Vendor",
+      required: true
+    },
+
     service_type: {
       type: String,
-      enum: [
-        "full_service",
-        "washing",
-        "battery_change",
-        "breakdown"
-      ],
+      enum: ["full_service", "washing", "battery_change", "breakdown"],
       required: true
     },
 
@@ -25,7 +26,7 @@ const serviceBookingSchema = new mongoose.Schema(
     },
 
     booking_time: {
-      type: String,
+      type: String, // "10:00"
       required: true
     },
 
