@@ -1,34 +1,44 @@
+
+
 const Battery = require("../models/Battery");
+const cloudinary = require("../config/cloudinary"); // ✅ CORRECT PATH
+
 
 exports.createBattery = async (req, res) => {
   try {
-    // FILES
+    // IMAGE
     if (req.files?.image) {
-      req.body.image_url = `/uploads/${req.files.image[0].filename}`;
-    }
-
-    if (req.files?.thumbnails) {
-      req.body.thumbnails = req.files.thumbnails.map(
-        f => `/uploads/${f.filename}`
+      const result = await cloudinary.uploader.upload(
+        `data:${req.files.image[0].mimetype};base64,${req.files.image[0].buffer.toString("base64")}`,
+        { folder: "vbike/batteries" }
       );
+      req.body.image_url = result.secure_url;
     }
 
-    // TYPE CASTING
+    // THUMBNAILS
+    if (req.files?.thumbnails) {
+      req.body.thumbnails = [];
+      for (const file of req.files.thumbnails) {
+        const result = await cloudinary.uploader.upload(
+          `data:${file.mimetype};base64,${file.buffer.toString("base64")}`,
+          { folder: "vbike/batteries/thumbnails" }
+        );
+        req.body.thumbnails.push(result.secure_url);
+      }
+    }
+
+    // TYPE CAST
     req.body.price = Number(req.body.price);
-    req.body.mrp = Number(req.body.mrp);
-    req.body.range_km = Number(req.body.range_km);
-    req.body.charging_time_hours = Number(req.body.charging_time_hours);
-    req.body.available_stock = Number(req.body.available_stock);
-    req.body.warranty_months = Number(req.body.warranty_months);
-    req.body.weight_kg = Number(req.body.weight_kg);
     req.body.is_active = req.body.is_active === "true";
 
     const battery = await Battery.create(req.body);
+
     res.status(201).json({ success: true, data: battery });
   } catch (err) {
     res.status(400).json({ success: false, error: err.message });
   }
 };
+
 
 exports.updateBattery = async (req, res) => {
   try {
