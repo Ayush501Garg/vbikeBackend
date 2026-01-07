@@ -23,6 +23,7 @@ router.put(
   controller.updateBattery
 );
 
+// com
 // GET ALL BATTERIES
 router.get(
   "/all",
