@@ -7,6 +7,13 @@ const purchaseSchema = new mongoose.Schema({
     unique: true
   },
 
+  // 🔑 USER REFERENCE
+  user_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: true
+  },
+
   products: [
     {
       reference_id: {
