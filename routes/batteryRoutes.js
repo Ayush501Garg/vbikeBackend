@@ -3,10 +3,7 @@ const router = express.Router();
 const controller = require("../controllers/batteryController");
 const upload = require("../utils/multer");
 
-<<<<<<< HEAD
 // CREATE BATTERY
-=======
->>>>>>> c737960e32e3da80169a71b40a9512c0a89a6b6a
 router.post(
   "/create",
   upload.fields([
@@ -16,7 +13,6 @@ router.post(
   controller.createBattery
 );
 
-<<<<<<< HEAD
 // UPDATE BATTERY
 router.put(
   "/update/:id",
@@ -46,6 +42,4 @@ router.delete(
   controller.deleteBattery
 );
 
-=======
->>>>>>> c737960e32e3da80169a71b40a9512c0a89a6b6a
 module.exports = router;
