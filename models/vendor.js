@@ -13,6 +13,18 @@ const vendorSchema = new mongoose.Schema({
     lng: Number
   },
 
+  // Super Vendor Reference (if this vendor is under a super vendor)
+  super_vendor: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'SuperVendor',
+    default: null
+  },
+  vendor_type: {
+    type: String,
+    enum: ['direct', 'sub_vendor'],
+    default: 'direct'
+  },
+
   // ⭐ FINAL INVENTORY STRUCTURE HERE ⭐
   inventory: [
     {
@@ -27,6 +39,16 @@ const vendorSchema = new mongoose.Schema({
   email: String,
   opening_hours: Object,
   rating: { type: Number, default: 0 },
+
+  // Business Metrics for Sub-Vendors
+  total_business: { type: Number, default: 0 },
+  total_bikes_sold: { type: Number, default: 0 },
+  pending_amount: { type: Number, default: 0 },
+  status: {
+    type: String,
+    enum: ['active', 'inactive', 'suspended'],
+    default: 'active'
+  },
 
 }, { timestamps: true });
 

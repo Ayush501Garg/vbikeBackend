@@ -39,11 +39,8 @@ const batteryWishlistRoute = require("./routes/batteryWishlistRoutes");
 const serviceBookingRoute = require("./routes/serviceBookingRoutes");
 const vendorServiceSlot = require("./routes/vendorServiceSlotRoutes");
 const purchaseRoute = require("./routes/purchaseRoutes");
-
-
-
-
-
+const batteryVendor = require("./routes/batteryRoutes");
+const superVendorRoutes = require("./routes/superVendorRoutes");
 
 
 // Import socket module
@@ -159,6 +156,9 @@ app.use("/api/battery-wishlist", batteryWishlistRoute);
 app.use("/api/service-booking", serviceBookingRoute);
 app.use("/api/vendor-slot", vendorServiceSlot);
 app.use("/api", purchaseRoute);
+app.use("/api/battery-vendors", batteryVendor);
+app.use("/api/super-vendors", superVendorRoutes);
+
 
 // Start server
 server.listen(8000, () => console.log("🚀 Server running on port 8000"));
