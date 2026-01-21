@@ -103,6 +103,29 @@ const superVendorSchema = new mongoose.Schema({
         default: 0
     },
 
+    // Inventory held by Super Vendor (stock received from company)
+    inventory: [
+        {
+            product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
+            assigned_stock: { type: Number, default: 0 },
+            sold_stock: { type: Number, default: 0 }, // treated as transferred to sub-vendors or direct sales
+            available_stock: { type: Number, default: 0 },
+            // Pricing for this product at super vendor level
+            custom_price: { type: Number }, // Price set by super vendor
+            discount_percentage: { type: Number, default: 0, min: 0, max: 100 }, // % discount from base
+            markup_percentage: { type: Number, default: 0, min: 0 } // % markup from base
+        }
+    ],
+
+    // Pricing Rules for Sub Vendors under this Super Vendor
+    default_pricing_rules: {
+        discount_percentage: { type: Number, default: 0, min: 0, max: 100 },
+        markup_percentage: { type: Number, default: 0, min: 0 },
+        can_set_custom_price: { type: Boolean, default: false },
+        min_margin_percentage: { type: Number, default: 0 }, // Minimum margin for sub vendors
+        max_discount_percentage: { type: Number, default: 10 } // Max discount sub vendors can give
+    },
+
     // Business Metrics
     direct_business: {
         type: Number,

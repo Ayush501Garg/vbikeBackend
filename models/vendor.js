@@ -31,9 +31,20 @@ const vendorSchema = new mongoose.Schema({
       product: { type: mongoose.Schema.Types.ObjectId, ref: "Product" },
       assigned_stock: { type: Number, default: 0 },
       sold_stock: { type: Number, default: 0 },
-      available_stock: { type: Number, default: 0 }
+      available_stock: { type: Number, default: 0 },
+      // Pricing for this product at sub vendor level
+      custom_price: { type: Number }, // Optional: custom price set by sub vendor
+      min_price: { type: Number }, // Minimum allowed price (set by super vendor)
+      max_price: { type: Number }  // Maximum allowed price (set by super vendor)
     }
   ],
+
+  // Pricing Rules (when sub vendor under super vendor)
+  pricing_rules: {
+    discount_percentage: { type: Number, default: 0, min: 0, max: 100 }, // % discount from base
+    markup_percentage: { type: Number, default: 0, min: 0 }, // % markup from base
+    can_set_custom_price: { type: Boolean, default: false } // Can sub vendor set custom price
+  },
 
   phone: String,
   email: String,

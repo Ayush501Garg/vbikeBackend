@@ -16,6 +16,11 @@ router.delete("/inventory/remove", vendorController.removeProductFromInventory);
 router.get("/product/total/:productId", vendorController.getTotalAssignedStock);
 router.get("/products/total", vendorController.getAllProductsTotalStock);
 
+// Sub Vendor Sales & Pricing
+router.post('/:id/sell', vendorController.sellProductBySubVendor);
+router.put('/:id/set-price', vendorController.setSubVendorProductPrice);
+router.get('/:id/sales-history', vendorController.getSubVendorSalesHistory);
+
 // Nearby vendors
 router.get('/nearby/search', vendorController.getNearbyVendors);
 

@@ -460,6 +460,216 @@ function getDistance(lat1, lon1, lat2, lon2) {
 }
 
 // ------------------------------
+// SUB VENDOR SELLS PRODUCT
+// ------------------------------
+exports.sellProductBySubVendor = async (req, res) => {
+  try {
+    const { productId, quantity, selling_price, customer_details } = req.body;
+    const qty = Number(quantity);
+
+    if (!productId || !qty || qty <= 0) {
+      return res.status(400).json({
+        status: "error",
+        message: "productId and positive quantity are required"
+      });
+    }
+
+    const vendor = await Vendor.findById(req.params.id)
+      .populate('super_vendor');
+    
+    if (!vendor) {
+      return res.status(404).json({ 
+        status: "error", 
+        message: "Vendor not found" 
+      });
+    }
+
+    const inventoryItem = vendor.inventory.find(
+      item => item.product?.toString() === productId
+    );
+
+    if (!inventoryItem) {
+      return res.status(404).json({
+        status: "error",
+        message: "Product not found in inventory"
+      });
+    }
+
+    if (inventoryItem.available_stock < qty) {
+      return res.status(400).json({
+        status: "error",
+        message: `Only ${inventoryItem.available_stock} units available`
+      });
+    }
+
+    // Validate pricing if sub vendor under super vendor
+    const product = await Product.findById(productId);
+    if (vendor.vendor_type === 'sub_vendor' && vendor.super_vendor) {
+      if (inventoryItem.min_price && selling_price < inventoryItem.min_price) {
+        return res.status(400).json({
+          status: "error",
+          message: `Price cannot be below minimum price: ${inventoryItem.min_price}`
+        });
+      }
+      if (inventoryItem.max_price && selling_price > inventoryItem.max_price) {
+        return res.status(400).json({
+          status: "error",
+          message: `Price cannot exceed maximum price: ${inventoryItem.max_price}`
+        });
+      }
+    }
+
+    // Deduct from sub vendor inventory
+    inventoryItem.available_stock -= qty;
+    inventoryItem.sold_stock += qty;
+
+    // Update business metrics
+    const saleAmount = (selling_price || product.price) * qty;
+    vendor.total_business += saleAmount;
+    vendor.total_bikes_sold += qty;
+
+    await vendor.save();
+
+    // If sub vendor is under super vendor, update super vendor metrics
+    if (vendor.vendor_type === 'sub_vendor' && vendor.super_vendor) {
+      const SuperVendor = require('../models/SuperVendor');
+      const superVendor = await SuperVendor.findById(vendor.super_vendor);
+      
+      if (superVendor) {
+        superVendor.sub_vendor_business += saleAmount;
+        superVendor.sub_vendor_bikes_sold += qty;
+        superVendor.total_business = superVendor.direct_business + superVendor.sub_vendor_business;
+        await superVendor.save();
+      }
+    }
+
+    res.status(200).json({
+      status: "success",
+      message: "Sale completed successfully",
+      sale_details: {
+        product: product.name,
+        quantity: qty,
+        price_per_unit: selling_price || product.price,
+        total_amount: saleAmount,
+        remaining_stock: inventoryItem.available_stock,
+        customer: customer_details
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ 
+      status: "error", 
+      message: err.message 
+    });
+  }
+};
+
+// ------------------------------
+// SET PRODUCT PRICING FOR SUB VENDOR
+// ------------------------------
+exports.setSubVendorProductPrice = async (req, res) => {
+  try {
+    const { productId, custom_price } = req.body;
+
+    const vendor = await Vendor.findById(req.params.id);
+    if (!vendor) {
+      return res.status(404).json({ 
+        status: "error", 
+        message: "Vendor not found" 
+      });
+    }
+
+    const inventoryItem = vendor.inventory.find(
+      item => item.product?.toString() === productId
+    );
+
+    if (!inventoryItem) {
+      return res.status(404).json({
+        status: "error",
+        message: "Product not found in inventory"
+      });
+    }
+
+    // Check if custom pricing is allowed
+    if (!vendor.pricing_rules?.can_set_custom_price) {
+      return res.status(403).json({
+        status: "error",
+        message: "Custom pricing not allowed for this vendor"
+      });
+    }
+
+    // Validate price within limits
+    if (inventoryItem.min_price && custom_price < inventoryItem.min_price) {
+      return res.status(400).json({
+        status: "error",
+        message: `Price cannot be below minimum: ${inventoryItem.min_price}`
+      });
+    }
+
+    if (inventoryItem.max_price && custom_price > inventoryItem.max_price) {
+      return res.status(400).json({
+        status: "error",
+        message: `Price cannot exceed maximum: ${inventoryItem.max_price}`
+      });
+    }
+
+    inventoryItem.custom_price = custom_price;
+    await vendor.save();
+
+    res.status(200).json({
+      status: "success",
+      message: "Product price updated successfully",
+      data: inventoryItem
+    });
+  } catch (err) {
+    res.status(500).json({ 
+      status: "error", 
+      message: err.message 
+    });
+  }
+};
+
+// ------------------------------
+// GET SUB VENDOR SALES HISTORY
+// ------------------------------
+exports.getSubVendorSalesHistory = async (req, res) => {
+  try {
+    const vendor = await Vendor.findById(req.params.id)
+      .populate({
+        path: 'inventory.product',
+        select: 'name model base_price'
+      });
+
+    if (!vendor) {
+      return res.status(404).json({ 
+        status: "error", 
+        message: "Vendor not found" 
+      });
+    }
+
+    const salesData = vendor.inventory.map(item => ({
+      product: item.product,
+      assigned_stock: item.assigned_stock,
+      sold_stock: item.sold_stock,
+      available_stock: item.available_stock,
+      custom_price: item.custom_price
+    }));
+
+    res.status(200).json({
+      status: "success",
+      vendor_name: vendor.name,
+      total_business: vendor.total_business,
+      total_bikes_sold: vendor.total_bikes_sold,
+      sales_data: salesData
+    });
+  } catch (err) {
+    res.status(500).json({ 
+      status: "error", 
+      message: err.message 
+    });
+  }
+};
+
+// ------------------------------
 // GET NEARBY VENDORS (with live image URLs)
 // ------------------------------
 exports.getNearbyVendors = async (req, res) => {

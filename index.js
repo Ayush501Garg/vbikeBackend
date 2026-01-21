@@ -41,6 +41,7 @@ const vendorServiceSlot = require("./routes/vendorServiceSlotRoutes");
 const purchaseRoute = require("./routes/purchaseRoutes");
 const batteryVendor = require("./routes/batteryRoutes");
 const superVendorRoutes = require("./routes/superVendorRoutes");
+const superAdminRoutes = require("./routes/superAdminRoutes");
 
 
 // Import socket module
@@ -158,6 +159,7 @@ app.use("/api/vendor-slot", vendorServiceSlot);
 app.use("/api", purchaseRoute);
 app.use("/api/battery-vendors", batteryVendor);
 app.use("/api/super-vendors", superVendorRoutes);
+app.use("/api/super-admin", superAdminRoutes);
 
 
 // Start server

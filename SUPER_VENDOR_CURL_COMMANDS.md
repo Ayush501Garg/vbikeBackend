@@ -1,564 +1,288 @@
-# Super Vendor API - cURL Commands
+# 🏢 SUPER VENDOR API DOCUMENTATION
 
-Base URL: `http://localhost:8000`
+Super Vendor is created by Super Admin and manages inventory, sub-vendors, pricing, and sales within their region/state.
 
----
-
-## 1. CREATE SUPER VENDOR
-
-```bash
-curl -X POST http://localhost:8000/api/super-vendors \
--H "Content-Type: application/json" \
--d "{
-  \"super_vendor_id\": \"SV-001\",
-  \"company_name\": \"Delhi Bike Hub\",
-  \"owner_name\": \"Rajesh Kumar\",
-  \"phone\": \"+91 98765 43210\",
-  \"email\": \"rajesh@delhihub.com\",
-  \"address\": \"Shop No. 123, Connaught Place\",
-  \"city\": \"Delhi\",
-  \"state\": \"Delhi\",
-  \"pincode\": \"110001\",
-  \"longitude\": 77.2090,
-  \"latitude\": 28.6139,
-  \"gst_number\": \"07ABCDE1234F1Z5\",
-  \"pan_number\": \"ABCDE1234F\",
-  \"bank_account\": \"1234567890\",
-  \"ifsc_code\": \"SBIN0001234\",
-  \"bank_name\": \"State Bank of India\",
-  \"coverage_area\": \"Delhi, Gurgaon, Noida\",
-  \"status\": \"active\",
-  \"notes\": \"Primary distributor for Delhi NCR\"
-}"
-```
+**Base URL:** `http://localhost:8000/api/super-vendors`
 
 ---
 
-## 2. GET ALL SUPER VENDORS
+## 🏪 SUPER VENDOR MANAGEMENT
 
-### Basic
-```bash
-curl -X GET http://localhost:8000/api/super-vendors
-```
+### 1. Create Super Vendor (By Super Admin)
+Only Super Admin can create Super Vendors.
 
-### With Filters
 ```bash
-curl -X GET "http://localhost:8000/api/super-vendors?state=Delhi&status=active"
-```
-
-### With Search
-```bash
-curl -X GET "http://localhost:8000/api/super-vendors?search=bike"
+curl -X POST "http://localhost:8000/api/super-vendors" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "super_vendor_id": "SV-MH-001",
+    "company_name": "VBike Maharashtra",
+    "owner_name": "Amit Sharma",
+    "phone": "+91-9876543210",
+    "email": "amit.sharma@vbike-mh.com",
+    "address": "123 MG Road",
+    "city": "Mumbai",
+    "state": "Maharashtra",
+    "pincode": "400001",
+    "gst_number": "27AAAAA0000A1Z5",
+    "pan_number": "AAAAA0000A",
+    "bank_account": "1234567890",
+    "ifsc_code": "HDFC0000123",
+    "bank_name": "HDFC Bank",
+    "longitude": 72.8777,
+    "latitude": 19.0760,
+    "status": "active"
+  }'
 ```
 
 ---
 
-## 3. GET SUPER VENDOR BY ID
+### 2. Get All Super Vendors
 
 ```bash
-curl -X GET http://localhost:8000/api/super-vendors/SUPER_VENDOR_ID
-```
-
-**Example:**
-```bash
-curl -X GET http://localhost:8000/api/super-vendors/679053e1234567890abcdef1
+curl -X GET "http://localhost:8000/api/super-vendors"
 ```
 
 ---
 
-## 4. UPDATE SUPER VENDOR
+### 3. Get Super Vendor By ID
 
 ```bash
-curl -X PUT http://localhost:8000/api/super-vendors/SUPER_VENDOR_ID \
--H "Content-Type: application/json" \
--d "{
-  \"company_name\": \"Delhi Bike Hub Updated\",
-  \"phone\": \"+91 98765 00000\",
-  \"status\": \"active\"
-}"
+curl -X GET "http://localhost:8000/api/super-vendors/675d58a1c9f234567890bcde"
 ```
 
 ---
 
-## 5. DELETE SUPER VENDOR
+### 4. Update Super Vendor
 
 ```bash
-curl -X DELETE http://localhost:8000/api/super-vendors/SUPER_VENDOR_ID
+curl -X PUT "http://localhost:8000/api/super-vendors/675d58a1c9f234567890bcde" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "phone": "+91-9876543211",
+    "email": "newemail@vbike-mh.com"
+  }'
 ```
 
 ---
 
-## 6. GET SUPER VENDOR BY STATE
+### 5. Get Super Vendor Dashboard
 
 ```bash
-curl -X GET http://localhost:8000/api/super-vendors/state/Delhi
+curl -X GET "http://localhost:8000/api/super-vendors/675d58a1c9f234567890bcde/dashboard"
 ```
 
-**Other States:**
-```bash
-curl -X GET http://localhost:8000/api/super-vendors/state/Maharashtra
-curl -X GET http://localhost:8000/api/super-vendors/state/Karnataka
-```
-
----
-
-## 7. FIND NEARBY SUPER VENDORS (GEO-LOCATION)
-
-```bash
-curl -X GET "http://localhost:8000/api/super-vendors/nearby?longitude=77.2090&latitude=28.6139&maxDistance=50000"
-```
-
-**Parameters:**
-- `longitude` - Longitude coordinate (required)
-- `latitude` - Latitude coordinate (required)
-- `maxDistance` - Distance in meters (optional, default: 50000 = 50km)
-
----
-
-## 8. ASSIGN SUB-VENDORS TO SUPER VENDOR
-
-```bash
-curl -X POST http://localhost:8000/api/super-vendors/SUPER_VENDOR_ID/assign-vendors \
--H "Content-Type: application/json" \
--d "{
-  \"vendor_ids\": [\"vendor_id_1\", \"vendor_id_2\", \"vendor_id_3\"]
-}"
-```
-
-**Example:**
-```bash
-curl -X POST http://localhost:8000/api/super-vendors/679053e1234567890abcdef1/assign-vendors \
--H "Content-Type: application/json" \
--d "{
-  \"vendor_ids\": [\"678901234567890abcdef123\", \"678901234567890abcdef124\"]
-}"
-```
-
----
-
-## 9. REMOVE SUB-VENDOR FROM SUPER VENDOR
-
-```bash
-curl -X POST http://localhost:8000/api/super-vendors/SUPER_VENDOR_ID/remove-vendor \
--H "Content-Type: application/json" \
--d "{
-  \"vendor_id\": \"vendor_id_to_remove\"
-}"
-```
-
----
-
-## 10. RECORD PAYMENT
-
-### Cash Payment
-```bash
-curl -X POST http://localhost:8000/api/super-vendors/SUPER_VENDOR_ID/payments \
--H "Content-Type: application/json" \
--d "{
-  \"amount\": 500000,
-  \"payment_date\": \"2026-01-21\",
-  \"payment_method\": \"cash\",
-  \"notes\": \"Cash payment received for January bikes\"
-}"
-```
-
-### Bank Transfer Payment
-```bash
-curl -X POST http://localhost:8000/api/super-vendors/SUPER_VENDOR_ID/payments \
--H "Content-Type: application/json" \
--d "{
-  \"amount\": 2500000,
-  \"payment_date\": \"2026-01-21\",
-  \"payment_method\": \"bank_transfer\",
-  \"payment_reference\": \"NEFT45678912345\",
-  \"utr_number\": \"UTR123456789\",
-  \"notes\": \"NEFT payment for bikes\"
-}"
-```
-
-### Cheque Payment
-```bash
-curl -X POST http://localhost:8000/api/super-vendors/SUPER_VENDOR_ID/payments \
--H "Content-Type: application/json" \
--d "{
-  \"amount\": 1800000,
-  \"payment_date\": \"2026-01-21\",
-  \"payment_method\": \"cheque\",
-  \"cheque_number\": \"CHQ789456\",
-  \"notes\": \"Cheque payment\"
-}"
-```
-
-### Payment with Invoice Link
-```bash
-curl -X POST http://localhost:8000/api/super-vendors/SUPER_VENDOR_ID/payments \
--H "Content-Type: application/json" \
--d "{
-  \"amount\": 1130000,
-  \"payment_date\": \"2026-01-21\",
-  \"payment_method\": \"bank_transfer\",
-  \"payment_reference\": \"NEFT999888777\",
-  \"invoice_id\": \"INVOICE_ID_HERE\",
-  \"notes\": \"Payment for invoice INV-SV-2026-0015\"
-}"
-```
-
----
-
-## 11. GET LEDGER
-
-### All Transactions
-```bash
-curl -X GET http://localhost:8000/api/super-vendors/SUPER_VENDOR_ID/ledger
-```
-
-### With Date Range
-```bash
-curl -X GET "http://localhost:8000/api/super-vendors/SUPER_VENDOR_ID/ledger?startDate=2026-01-01&endDate=2026-01-31"
-```
-
-### Filter by Transaction Type
-```bash
-curl -X GET "http://localhost:8000/api/super-vendors/SUPER_VENDOR_ID/ledger?transaction_type=payment"
-```
-
-**Transaction Types:** invoice, payment, credit_note, debit_note, adjustment
-
-### Combined Filters
-```bash
-curl -X GET "http://localhost:8000/api/super-vendors/SUPER_VENDOR_ID/ledger?startDate=2026-01-01&endDate=2026-01-31&transaction_type=payment"
-```
-
----
-
-## 12. EXPORT LEDGER TO CSV
-
-```bash
-curl -X GET http://localhost:8000/api/super-vendors/SUPER_VENDOR_ID/ledger/export
-```
-
-**Save to file:**
-```bash
-curl -X GET http://localhost:8000/api/super-vendors/SUPER_VENDOR_ID/ledger/export -o ledger.json
-```
-
----
-
-## 13. GET PAYMENT STATISTICS
-
-```bash
-curl -X GET http://localhost:8000/api/super-vendors/SUPER_VENDOR_ID/payment-stats
-```
-
----
-
-## 14. CREATE INVOICE
-
-### Simple Invoice
-```bash
-curl -X POST http://localhost:8000/api/super-vendors/SUPER_VENDOR_ID/invoices \
--H "Content-Type: application/json" \
--d "{
-  \"items\": [
-    {
-      \"description\": \"V-Bike Model X - Electric Scooter\",
-      \"quantity\": 10,
-      \"unit_price\": 50000,
-      \"discount\": 5000,
-      \"tax_rate\": 18
-    },
-    {
-      \"description\": \"V-Bike Model Y - Premium\",
-      \"quantity\": 5,
-      \"unit_price\": 75000,
-      \"discount\": 0,
-      \"tax_rate\": 18
-    }
-  ],
-  \"due_date\": \"2026-02-21\",
-  \"discount\": 10000,
-  \"terms_and_conditions\": \"Payment due within 30 days\",
-  \"notes\": \"Bulk order for January 2026\"
-}"
-```
-
-### Invoice with Bike Model Reference
-```bash
-curl -X POST http://localhost:8000/api/super-vendors/SUPER_VENDOR_ID/invoices \
--H "Content-Type: application/json" \
--d "{
-  \"items\": [
-    {
-      \"bike_model\": \"BIKE_MODEL_ID_HERE\",
-      \"description\": \"V-Bike Model X\",
-      \"quantity\": 20,
-      \"unit_price\": 50000,
-      \"discount\": 10000,
-      \"tax_rate\": 18
-    }
-  ],
-  \"due_date\": \"2026-02-21\",
-  \"discount\": 5000,
-  \"terms_and_conditions\": \"Payment within 30 days\",
-  \"notes\": \"January bulk order\"
-}"
-```
-
-### Invoice with Product Reference
-```bash
-curl -X POST http://localhost:8000/api/super-vendors/SUPER_VENDOR_ID/invoices \
--H "Content-Type: application/json" \
--d "{
-  \"items\": [
-    {
-      \"product\": \"PRODUCT_ID_HERE\",
-      \"description\": \"Battery Pack 48V\",
-      \"quantity\": 50,
-      \"unit_price\": 15000,
-      \"discount\": 0,
-      \"tax_rate\": 18
-    }
-  ],
-  \"due_date\": \"2026-02-21\"
-}"
-```
-
----
-
-## 15. GET ALL INVOICES
-
-### All Invoices
-```bash
-curl -X GET http://localhost:8000/api/super-vendors/SUPER_VENDOR_ID/invoices
-```
-
-### Filter by Status
-```bash
-curl -X GET "http://localhost:8000/api/super-vendors/SUPER_VENDOR_ID/invoices?status=pending"
-```
-
-**Status Options:** draft, pending, partially_paid, paid, overdue, cancelled
-
-### Filter by Payment Status
-```bash
-curl -X GET "http://localhost:8000/api/super-vendors/SUPER_VENDOR_ID/invoices?payment_status=unpaid"
-```
-
-**Payment Status Options:** unpaid, partially_paid, paid
-
-### Combined Filters
-```bash
-curl -X GET "http://localhost:8000/api/super-vendors/SUPER_VENDOR_ID/invoices?status=pending&payment_status=unpaid"
-```
-
----
-
-## 16. GET SINGLE INVOICE BY ID
-
-```bash
-curl -X GET http://localhost:8000/api/super-vendors/invoices/INVOICE_ID
-```
-
----
-
-## 17. UPDATE INVOICE STATUS
-
-```bash
-curl -X PUT http://localhost:8000/api/super-vendors/invoices/INVOICE_ID/status \
--H "Content-Type: application/json" \
--d "{
-  \"status\": \"paid\"
-}"
-```
-
-**Status Options:**
-- draft
-- pending
-- partially_paid
-- paid
-- overdue
-- cancelled
-
-**Examples:**
-```bash
-# Mark as cancelled
-curl -X PUT http://localhost:8000/api/super-vendors/invoices/INVOICE_ID/status \
--H "Content-Type: application/json" \
--d "{\"status\": \"cancelled\"}"
-
-# Mark as overdue
-curl -X PUT http://localhost:8000/api/super-vendors/invoices/INVOICE_ID/status \
--H "Content-Type: application/json" \
--d "{\"status\": \"overdue\"}"
-```
-
----
-
-## 18. DELETE TRANSACTION
-
-```bash
-curl -X DELETE http://localhost:8000/api/super-vendors/transactions/TRANSACTION_ID
-```
-
----
-
-## 19. GET SUPER VENDOR DASHBOARD
-
-```bash
-curl -X GET http://localhost:8000/api/super-vendors/SUPER_VENDOR_ID/dashboard
-```
-
----
-
-## COMPLETE WORKFLOW EXAMPLE
-
-### Step 1: Create Super Vendor for Delhi
-```bash
-curl -X POST http://localhost:8000/api/super-vendors \
--H "Content-Type: application/json" \
--d "{
-  \"super_vendor_id\": \"SV-001\",
-  \"company_name\": \"Delhi Bike Hub\",
-  \"owner_name\": \"Rajesh Kumar\",
-  \"phone\": \"+91 98765 43210\",
-  \"email\": \"rajesh@delhihub.com\",
-  \"address\": \"Shop No. 123, Connaught Place\",
-  \"city\": \"Delhi\",
-  \"state\": \"Delhi\",
-  \"pincode\": \"110001\",
-  \"longitude\": 77.2090,
-  \"latitude\": 28.6139,
-  \"gst_number\": \"07ABCDE1234F1Z5\",
-  \"pan_number\": \"ABCDE1234F\",
-  \"status\": \"active\"
-}"
-```
-
-### Step 2: Assign Sub-Vendors (Replace IDs)
-```bash
-curl -X POST http://localhost:8000/api/super-vendors/SUPER_VENDOR_ID/assign-vendors \
--H "Content-Type: application/json" \
--d "{
-  \"vendor_ids\": [\"vendor_id_1\", \"vendor_id_2\"]
-}"
-```
-
-### Step 3: Create Invoice
-```bash
-curl -X POST http://localhost:8000/api/super-vendors/SUPER_VENDOR_ID/invoices \
--H "Content-Type: application/json" \
--d "{
-  \"items\": [
-    {
-      \"description\": \"V-Bike Model X\",
-      \"quantity\": 20,
-      \"unit_price\": 50000,
-      \"discount\": 10000,
-      \"tax_rate\": 18
-    }
-  ],
-  \"due_date\": \"2026-02-21\",
-  \"discount\": 5000
-}"
-```
-
-### Step 4: Record Payment
-```bash
-curl -X POST http://localhost:8000/api/super-vendors/SUPER_VENDOR_ID/payments \
--H "Content-Type: application/json" \
--d "{
-  \"amount\": 500000,
-  \"payment_date\": \"2026-01-21\",
-  \"payment_method\": \"bank_transfer\",
-  \"payment_reference\": \"NEFT123456789\",
-  \"notes\": \"Partial payment\"
-}"
-```
-
-### Step 5: Check Ledger
-```bash
-curl -X GET http://localhost:8000/api/super-vendors/SUPER_VENDOR_ID/ledger
-```
-
-### Step 6: View Dashboard
-```bash
-curl -X GET http://localhost:8000/api/super-vendors/SUPER_VENDOR_ID/dashboard
-```
-
----
-
-## TESTING WITH POSTMAN
-
-Import these cURL commands directly into Postman:
-1. Open Postman
-2. Click "Import" button
-3. Select "Raw text"
-4. Paste any cURL command
-5. Click "Continue"
-
----
-
-## WINDOWS PowerShell Format
-
-If using Windows PowerShell, use this format:
-
-```powershell
-$body = @{
-    super_vendor_id = "SV-001"
-    company_name = "Delhi Bike Hub"
-    owner_name = "Rajesh Kumar"
-    email = "rajesh@delhihub.com"
-    state = "Delhi"
-} | ConvertTo-Json
-
-Invoke-RestMethod -Uri "http://localhost:8000/api/super-vendors" -Method Post -Body $body -ContentType "application/json"
-```
-
----
-
-## QUICK TEST COMMANDS
-
-### 1. Test Server
-```bash
-curl http://localhost:8000
-```
-
-### 2. Create First Super Vendor
-```bash
-curl -X POST http://localhost:8000/api/super-vendors \
--H "Content-Type: application/json" \
--d "{\"super_vendor_id\":\"SV-001\",\"company_name\":\"Test Hub\",\"owner_name\":\"Test Owner\",\"phone\":\"+91 9876543210\",\"email\":\"test@test.com\",\"address\":\"Test Address\",\"city\":\"Delhi\",\"state\":\"Delhi\",\"pincode\":\"110001\",\"longitude\":77.2090,\"latitude\":28.6139,\"status\":\"active\"}"
-```
-
-### 3. Get All
-```bash
-curl http://localhost:8000/api/super-vendors
-```
-
----
-
-## ERROR RESPONSES
-
-**Success Response (200/201):**
+**Response:**
 ```json
 {
   "success": true,
-  "message": "...",
-  "data": {...}
-}
-```
-
-**Error Response (400/404/500):**
-```json
-{
-  "success": false,
-  "message": "Error message here"
+  "data": {
+    "company_name": "VBike Maharashtra",
+    "state": "Maharashtra",
+    "total_sub_vendors": 8,
+    "direct_business": 4500000,
+    "direct_bikes_sold": 45,
+    "sub_vendor_business": 12000000,
+    "sub_vendor_bikes_sold": 120,
+    "total_business": 16500000
+  }
 }
 ```
 
 ---
 
-## NOTES
+## 👥 SUB-VENDOR MANAGEMENT
+
+### 6. Create Sub Vendor Under Super Vendor
+Super Vendor creates a new sub vendor under their management.
+
+```bash
+curl -X POST "http://localhost:8000/api/super-vendors/675d58a1c9f234567890bcde/create-sub-vendor" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "VBike Pune Dealership",
+    "email": "pune@vbike.com",
+    "phone": "+91-9988776655",
+    "address_line": "456 FC Road",
+    "city": "Pune",
+    "state": "Maharashtra",
+    "postal_code": "411004",
+    "lat": 18.5204,
+    "lng": 73.8567
+  }'
+```
+
+---
+
+### 7. Assign Existing Sub Vendors
+
+```bash
+curl -X POST "http://localhost:8000/api/super-vendors/675d58a1c9f234567890bcde/assign-vendors" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "vendor_ids": ["675e69b2d0f345678901cdef"]
+  }'
+```
+
+---
+
+### 8. Remove Sub Vendor
+
+```bash
+curl -X POST "http://localhost:8000/api/super-vendors/675d58a1c9f234567890bcde/remove-vendor" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "vendor_id": "675e69b2d0f345678901cdef"
+  }'
+```
+
+---
+
+## 🏷️ PRICING MANAGEMENT
+
+### 9. Set Product Pricing
+Set discount/markup % or custom price for products.
+
+```bash
+curl -X PUT "http://localhost:8000/api/super-vendors/675d58a1c9f234567890bcde/inventory/675c47a2b8e9f123456789ab/pricing" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "discount_percentage": 8,
+    "custom_price": 78200
+  }'
+```
+
+---
+
+### 10. Update Pricing Rules for Sub Vendors
+
+```bash
+curl -X PUT "http://localhost:8000/api/super-vendors/675d58a1c9f234567890bcde/pricing-rules" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "discount_percentage": 5,
+    "can_set_custom_price": true,
+    "min_margin_percentage": 3,
+    "max_discount_percentage": 10
+  }'
+```
+
+---
+
+## 💰 SALES
+
+### 11. Super Vendor Sells Product
+
+```bash
+curl -X POST "http://localhost:8000/api/super-vendors/675d58a1c9f234567890bcde/sell" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "productId": "675c47a2b8e9f123456789ab",
+    "quantity": 3,
+    "selling_price": 78200,
+    "customer_details": {
+      "name": "Priya Deshmukh",
+      "phone": "+91-9123456789"
+    }
+  }'
+```
+
+---
+
+## 📦 INVENTORY MANAGEMENT
+
+### 12. Get Super Vendor Inventory
+
+```bash
+curl -X GET "http://localhost:8000/api/super-vendors/675d58a1c9f234567890bcde/inventory"
+```
+
+---
+
+### 13. Transfer Inventory to Sub Vendor
+
+```bash
+curl -X POST "http://localhost:8000/api/super-vendors/675d58a1c9f234567890bcde/sub-vendors/675e69b2d0f345678901cdef/inventory" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "productId": "675c47a2b8e9f123456789ab",
+    "quantity": 10
+  }'
+```
+
+---
+
+### 14. Get Sub Vendor Inventory
+
+```bash
+curl -X GET "http://localhost:8000/api/super-vendors/675d58a1c9f234567890bcde/sub-vendors/675e69b2d0f345678901cdef/inventory"
+```
+
+---
+
+## 💳 PAYMENTS & INVOICES
+
+### 15. Record Payment
+
+```bash
+curl -X POST "http://localhost:8000/api/super-vendors/675d58a1c9f234567890bcde/payments" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount": 500000,
+    "payment_type": "credit",
+    "payment_method": "bank_transfer",
+    "reference_number": "TXN123456"
+  }'
+```
+
+---
+
+### 16. Get Ledger
+
+```bash
+curl -X GET "http://localhost:8000/api/super-vendors/675d58a1c9f234567890bcde/ledger?startDate=2024-01-01&endDate=2024-12-31"
+```
+
+---
+
+### 17. Create Invoice
+
+```bash
+curl -X POST "http://localhost:8000/api/super-vendors/675d58a1c9f234567890bcde/invoices" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "invoice_number": "INV-2024-001",
+    "amount": 234600,
+    "due_date": "2024-02-15",
+    "items": [{
+      "description": "VBike Model X",
+      "quantity": 3,
+      "price": 78200
+    }]
+  }'
+```
+
+---
+
+## 📝 RESPONSIBILITIES
+
+✅ Receives inventory from Super Admin  
+✅ Can sell products directly  
+✅ Creates and manages sub vendors  
+✅ Transfers inventory to sub vendors  
+✅ Sets pricing for products  
+✅ Defines pricing rules for sub vendors  
+✅ Views sales reports
+
+---
+
+## 🔄 Inventory Flow
+
+```
+Super Admin → Super Vendor
+    ├── Super Vendor Sells (deduct from super vendor)
+    └── Transfer to Sub Vendor → Sub Vendor Sells (deduct from super vendor)
+```
 
 1. Replace `SUPER_VENDOR_ID` with actual MongoDB ObjectId
 2. Replace `INVOICE_ID` with actual invoice MongoDB ObjectId

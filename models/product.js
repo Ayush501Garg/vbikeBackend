@@ -4,10 +4,11 @@ const mongoose = require('mongoose');
 const productSchema = new mongoose.Schema({
   name: { type: String, required: true },
   description: { type: String },
-  price: { type: Number, required: true },
-  mrp: { type: Number },
+  price: { type: Number, required: true }, // Current selling price
+  base_price: { type: Number, required: true }, // Base price set by Super Admin (MRP)
+  mrp: { type: Number }, // Market Retail Price
   category_id: { type: String, required: true },
-  stock_quantity: { type: Number, default: 0 },
+  stock_quantity: { type: Number, default: 0 }, // Main inventory with Super Admin
   image_url: { type: String },
   thumbnails: [{ type: String }],
   is_active: { type: Boolean, default: true },

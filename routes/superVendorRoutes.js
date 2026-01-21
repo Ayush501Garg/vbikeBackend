@@ -11,7 +11,15 @@ const {
     removeSubVendor,
     getSuperVendorByState,
     findNearbySuperVendors,
-    getSuperVendorDashboard
+    getSuperVendorDashboard,
+    assignInventoryToSuperVendor,
+    getSuperVendorInventory,
+    transferInventoryToSubVendor,
+    getSubVendorInventory,
+    createSubVendor,
+    setProductPricing,
+    sellProductBySuperVendor,
+    updatePricingRules
 } = require('../controllers/superVendorController');
 
 const {
@@ -56,11 +64,41 @@ router.get('/:id/dashboard', getSuperVendorDashboard);
 
 // ===== SUB-VENDOR MANAGEMENT ROUTES =====
 
+// Create sub vendor under super vendor
+router.post('/:id/create-sub-vendor', createSubVendor);
+
 // Assign sub-vendors to super vendor
 router.post('/:id/assign-vendors', assignSubVendors);
 
 // Remove sub-vendor from super vendor
 router.post('/:id/remove-vendor', removeSubVendor);
+
+// ===== PRICING ROUTES =====
+
+// Set pricing for a product in super vendor inventory
+router.put('/:id/inventory/:productId/pricing', setProductPricing);
+
+// Update default pricing rules for sub vendors
+router.put('/:id/pricing-rules', updatePricingRules);
+
+// ===== SALES ROUTES =====
+
+// Super vendor sells product directly
+router.post('/:id/sell', sellProductBySuperVendor);
+
+// ===== INVENTORY ROUTES =====
+
+// Assign inventory to super vendor from company warehouse
+router.post('/:id/inventory/assign', assignInventoryToSuperVendor);
+
+// Get super vendor inventory
+router.get('/:id/inventory', getSuperVendorInventory);
+
+// Transfer inventory to sub vendor
+router.post('/:id/sub-vendors/:vendorId/inventory', transferInventoryToSubVendor);
+
+// Get sub vendor inventory under a super vendor
+router.get('/:id/sub-vendors/:vendorId/inventory', getSubVendorInventory);
 
 // ===== PAYMENT & TRANSACTION ROUTES =====
 

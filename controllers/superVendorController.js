@@ -2,6 +2,7 @@ const SuperVendor = require('../models/SuperVendor');
 const Vendor = require('../models/vendor');
 const SuperVendorTransaction = require('../models/SuperVendorTransaction');
 const SuperVendorInvoice = require('../models/SuperVendorInvoice');
+const Product = require('../models/product');
 
 // @desc    Create new Super Vendor
 // @route   POST /api/super-vendors
@@ -405,6 +406,451 @@ exports.removeSubVendor = async (req, res) => {
     }
 };
 
+// @desc    Assign inventory from company warehouse to Super Vendor
+// @route   POST /api/super-vendors/:id/inventory/assign
+// @access  Admin / Super Admin
+exports.assignInventoryToSuperVendor = async (req, res) => {
+    try {
+        const { productId, quantity } = req.body;
+        const qty = Number(quantity);
+
+        if (!productId || !qty || qty <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'productId and positive quantity are required'
+            });
+        }
+
+        const superVendor = await SuperVendor.findById(req.params.id);
+        if (!superVendor) {
+            return res.status(404).json({ success: false, message: 'Super Vendor not found' });
+        }
+
+        const product = await Product.findById(productId);
+        if (!product) {
+            return res.status(404).json({ success: false, message: 'Product not found' });
+        }
+
+        if (qty > product.stock_quantity) {
+            return res.status(400).json({
+                success: false,
+                message: `Only ${product.stock_quantity} units available in warehouse`
+            });
+        }
+
+        product.stock_quantity -= qty;
+        await product.save();
+
+        const existing = superVendor.inventory.find(item => item.product?.toString() === productId);
+        if (existing) {
+            existing.assigned_stock += qty;
+            existing.available_stock += qty;
+        } else {
+            superVendor.inventory.push({
+                product: productId,
+                assigned_stock: qty,
+                sold_stock: 0,
+                available_stock: qty
+            });
+        }
+
+        await superVendor.save();
+
+        await superVendor.populate({
+            path: 'inventory.product',
+            select: 'name model price stock_quantity'
+        });
+
+        res.status(200).json({
+            success: true,
+            message: 'Stock assigned to super vendor successfully',
+            data: superVendor.inventory
+        });
+    } catch (error) {
+        console.error('Error assigning inventory to super vendor:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Server error assigning inventory'
+        });
+    }
+};
+
+// @desc    Get Super Vendor inventory
+// @route   GET /api/super-vendors/:id/inventory
+// @access  Admin / Super Admin
+exports.getSuperVendorInventory = async (req, res) => {
+    try {
+        const superVendor = await SuperVendor.findById(req.params.id)
+            .populate({ path: 'inventory.product', select: 'name model price stock_quantity' });
+
+        if (!superVendor) {
+            return res.status(404).json({ success: false, message: 'Super Vendor not found' });
+        }
+
+        res.status(200).json({
+            success: true,
+            count: superVendor.inventory.length,
+            data: superVendor.inventory
+        });
+    } catch (error) {
+        console.error('Error fetching super vendor inventory:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Server error fetching inventory'
+        });
+    }
+};
+
+// @desc    Transfer inventory from Super Vendor to a Sub Vendor
+// @route   POST /api/super-vendors/:id/sub-vendors/:vendorId/inventory
+// @access  Super Vendor / Admin
+exports.transferInventoryToSubVendor = async (req, res) => {
+    try {
+        const { productId, quantity } = req.body;
+        const qty = Number(quantity);
+
+        if (!productId || !qty || qty <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'productId and positive quantity are required'
+            });
+        }
+
+        const superVendor = await SuperVendor.findById(req.params.id);
+        if (!superVendor) {
+            return res.status(404).json({ success: false, message: 'Super Vendor not found' });
+        }
+
+        const subVendor = await Vendor.findById(req.params.vendorId);
+        if (!subVendor) {
+            return res.status(404).json({ success: false, message: 'Sub Vendor not found' });
+        }
+
+        // Ensure vendor is under this super vendor
+        if (!subVendor.super_vendor || subVendor.super_vendor.toString() !== superVendor._id.toString()) {
+            return res.status(400).json({
+                success: false,
+                message: 'Vendor is not assigned to this Super Vendor'
+            });
+        }
+
+        const inventoryItem = superVendor.inventory.find(item => item.product?.toString() === productId);
+        if (!inventoryItem) {
+            return res.status(404).json({ success: false, message: 'Product not found in super vendor inventory' });
+        }
+
+        if (inventoryItem.available_stock < qty) {
+            return res.status(400).json({
+                success: false,
+                message: `Only ${inventoryItem.available_stock} units available with super vendor`
+            });
+        }
+
+        // Deduct from super vendor inventory
+        inventoryItem.available_stock -= qty;
+        inventoryItem.sold_stock += qty; // treat as transferred
+
+        // Add to sub vendor inventory
+        const vendorItem = subVendor.inventory.find(i => i.product?.toString() === productId);
+        if (vendorItem) {
+            vendorItem.assigned_stock += qty;
+            vendorItem.available_stock += qty;
+        } else {
+            subVendor.inventory.push({
+                product: productId,
+                assigned_stock: qty,
+                sold_stock: 0,
+                available_stock: qty
+            });
+        }
+
+        subVendor.vendor_type = 'sub_vendor';
+        subVendor.super_vendor = superVendor._id;
+
+        await superVendor.save();
+        await subVendor.save();
+
+        await superVendor.populate({ path: 'inventory.product', select: 'name model price' });
+        await subVendor.populate({ path: 'inventory.product', select: 'name model price' });
+
+        res.status(200).json({
+            success: true,
+            message: 'Inventory transferred to sub vendor successfully',
+            super_vendor_inventory: superVendor.inventory,
+            sub_vendor_inventory: subVendor.inventory
+        });
+    } catch (error) {
+        console.error('Error transferring inventory to sub vendor:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Server error transferring inventory'
+        });
+    }
+};
+
+// @desc    Get inventory for a specific sub vendor under a super vendor
+// @route   GET /api/super-vendors/:id/sub-vendors/:vendorId/inventory
+// @access  Super Vendor / Admin
+exports.getSubVendorInventory = async (req, res) => {
+    try {
+        const superVendor = await SuperVendor.findById(req.params.id);
+        if (!superVendor) {
+            return res.status(404).json({ success: false, message: 'Super Vendor not found' });
+        }
+
+        const subVendor = await Vendor.findById(req.params.vendorId)
+            .populate({ path: 'inventory.product', select: 'name model price' });
+
+        if (!subVendor) {
+            return res.status(404).json({ success: false, message: 'Sub Vendor not found' });
+        }
+
+        if (!subVendor.super_vendor || subVendor.super_vendor.toString() !== superVendor._id.toString()) {
+            return res.status(400).json({
+                success: false,
+                message: 'Vendor is not assigned to this Super Vendor'
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            count: subVendor.inventory.length,
+            data: subVendor.inventory
+        });
+    } catch (error) {
+        console.error('Error getting sub vendor inventory:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Server error getting sub vendor inventory'
+        });
+    }
+};
+// @desc    Super Vendor creates a new Sub Vendor under them
+// @route   POST /api/super-vendors/:id/create-sub-vendor
+// @access  Super Vendor / Admin
+exports.createSubVendor = async (req, res) => {
+    try {
+        const { name, email, phone, address_line, city, state, postal_code, lat, lng } = req.body;
+
+        const superVendor = await SuperVendor.findById(req.params.id);
+        if (!superVendor) {
+            return res.status(404).json({ success: false, message: 'Super Vendor not found' });
+        }
+
+        // Create new sub vendor
+        const subVendor = await Vendor.create({
+            name,
+            email,
+            phone,
+            address_line,
+            city,
+            state,
+            postal_code,
+            location: { lat, lng },
+            super_vendor: superVendor._id,
+            vendor_type: 'sub_vendor',
+            status: 'active',
+            // Inherit default pricing rules from super vendor
+            pricing_rules: {
+                discount_percentage: superVendor.default_pricing_rules?.discount_percentage || 0,
+                markup_percentage: superVendor.default_pricing_rules?.markup_percentage || 0,
+                can_set_custom_price: superVendor.default_pricing_rules?.can_set_custom_price || false
+            }
+        });
+
+        // Add to super vendor's sub_vendors array
+        superVendor.sub_vendors.push(subVendor._id);
+        superVendor.total_sub_vendors = superVendor.sub_vendors.length;
+        await superVendor.save();
+
+        res.status(201).json({
+            success: true,
+            message: 'Sub Vendor created successfully',
+            data: subVendor
+        });
+    } catch (error) {
+        console.error('Error creating sub vendor:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Server error creating sub vendor'
+        });
+    }
+};
+
+// @desc    Super Vendor sets pricing for a product
+// @route   PUT /api/super-vendors/:id/inventory/:productId/pricing
+// @access  Super Vendor / Admin
+exports.setProductPricing = async (req, res) => {
+    try {
+        const { discount_percentage, markup_percentage, custom_price } = req.body;
+
+        const superVendor = await SuperVendor.findById(req.params.id);
+        if (!superVendor) {
+            return res.status(404).json({ success: false, message: 'Super Vendor not found' });
+        }
+
+        const inventoryItem = superVendor.inventory.find(
+            item => item.product?.toString() === req.params.productId
+        );
+
+        if (!inventoryItem) {
+            return res.status(404).json({
+                success: false,
+                message: 'Product not found in super vendor inventory'
+            });
+        }
+
+        // Update pricing
+        if (discount_percentage !== undefined) {
+            inventoryItem.discount_percentage = discount_percentage;
+        }
+        if (markup_percentage !== undefined) {
+            inventoryItem.markup_percentage = markup_percentage;
+        }
+        if (custom_price !== undefined) {
+            inventoryItem.custom_price = custom_price;
+        }
+
+        await superVendor.save();
+        await superVendor.populate({ path: 'inventory.product', select: 'name model base_price' });
+
+        res.status(200).json({
+            success: true,
+            message: 'Pricing updated successfully',
+            data: inventoryItem
+        });
+    } catch (error) {
+        console.error('Error setting product pricing:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Server error setting pricing'
+        });
+    }
+};
+
+// @desc    Super Vendor sells product directly
+// @route   POST /api/super-vendors/:id/sell
+// @access  Super Vendor / Admin
+exports.sellProductBySuperVendor = async (req, res) => {
+    try {
+        const { productId, quantity, selling_price, customer_details } = req.body;
+        const qty = Number(quantity);
+
+        if (!productId || !qty || qty <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'productId and positive quantity are required'
+            });
+        }
+
+        const superVendor = await SuperVendor.findById(req.params.id);
+        if (!superVendor) {
+            return res.status(404).json({ success: false, message: 'Super Vendor not found' });
+        }
+
+        const inventoryItem = superVendor.inventory.find(
+            item => item.product?.toString() === productId
+        );
+
+        if (!inventoryItem) {
+            return res.status(404).json({
+                success: false,
+                message: 'Product not found in inventory'
+            });
+        }
+
+        if (inventoryItem.available_stock < qty) {
+            return res.status(400).json({
+                success: false,
+                message: `Only ${inventoryItem.available_stock} units available`
+            });
+        }
+
+        // Deduct from super vendor inventory
+        inventoryItem.available_stock -= qty;
+        inventoryItem.sold_stock += qty;
+
+        // Update business metrics
+        const product = await Product.findById(productId);
+        const saleAmount = (selling_price || product.price) * qty;
+        
+        superVendor.direct_business += saleAmount;
+        superVendor.direct_bikes_sold += qty;
+        superVendor.total_business = superVendor.direct_business + superVendor.sub_vendor_business;
+
+        await superVendor.save();
+
+        res.status(200).json({
+            success: true,
+            message: 'Sale completed successfully',
+            sale_details: {
+                product: product.name,
+                quantity: qty,
+                price_per_unit: selling_price || product.price,
+                total_amount: saleAmount,
+                remaining_stock: inventoryItem.available_stock,
+                customer: customer_details
+            }
+        });
+    } catch (error) {
+        console.error('Error selling product:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Server error processing sale'
+        });
+    }
+};
+
+// @desc    Update default pricing rules for sub vendors
+// @route   PUT /api/super-vendors/:id/pricing-rules
+// @access  Super Vendor / Admin
+exports.updatePricingRules = async (req, res) => {
+    try {
+        const {
+            discount_percentage,
+            markup_percentage,
+            can_set_custom_price,
+            min_margin_percentage,
+            max_discount_percentage
+        } = req.body;
+
+        const superVendor = await SuperVendor.findById(req.params.id);
+        if (!superVendor) {
+            return res.status(404).json({ success: false, message: 'Super Vendor not found' });
+        }
+
+        // Update default pricing rules
+        if (discount_percentage !== undefined) {
+            superVendor.default_pricing_rules.discount_percentage = discount_percentage;
+        }
+        if (markup_percentage !== undefined) {
+            superVendor.default_pricing_rules.markup_percentage = markup_percentage;
+        }
+        if (can_set_custom_price !== undefined) {
+            superVendor.default_pricing_rules.can_set_custom_price = can_set_custom_price;
+        }
+        if (min_margin_percentage !== undefined) {
+            superVendor.default_pricing_rules.min_margin_percentage = min_margin_percentage;
+        }
+        if (max_discount_percentage !== undefined) {
+            superVendor.default_pricing_rules.max_discount_percentage = max_discount_percentage;
+        }
+
+        await superVendor.save();
+
+        res.status(200).json({
+            success: true,
+            message: 'Pricing rules updated successfully',
+            data: superVendor.default_pricing_rules
+        });
+    } catch (error) {
+        console.error('Error updating pricing rules:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Server error updating pricing rules'
+        });
+    }
+};
 // @desc    Get Super Vendor by State
 // @route   GET /api/super-vendors/state/:state
 // @access  Admin
