@@ -411,8 +411,9 @@ exports.removeSubVendor = async (req, res) => {
 // @access  Admin / Super Admin
 exports.assignInventoryToSuperVendor = async (req, res) => {
     try {
-        const { productId, quantity } = req.body;
+        const { productId, quantity, discount_percentage } = req.body;
         const qty = Number(quantity);
+        const discount = Math.max(0, Math.min(100, Number(discount_percentage) || 0)); // 0-100%
 
         if (!productId || !qty || qty <= 0) {
             return res.status(400).json({
@@ -445,16 +446,24 @@ exports.assignInventoryToSuperVendor = async (req, res) => {
             { runValidators: false }
         );
 
+        // Calculate pricing with discount
+        const basePrice = product.base_price || product.price || 0;
+        const finalPrice = basePrice * (1 - discount / 100);
+
         const existing = superVendor.inventory.find(item => item.product?.toString() === productId);
         if (existing) {
             existing.assigned_stock += qty;
             existing.available_stock += qty;
+            existing.discount_percentage = discount;
+            existing.custom_price = finalPrice;
         } else {
             superVendor.inventory.push({
                 product: productId,
                 assigned_stock: qty,
                 sold_stock: 0,
-                available_stock: qty
+                available_stock: qty,
+                discount_percentage: discount,
+                custom_price: finalPrice
             });
         }
 
@@ -462,12 +471,19 @@ exports.assignInventoryToSuperVendor = async (req, res) => {
 
         await superVendor.populate({
             path: 'inventory.product',
-            select: 'name model price stock_quantity'
+            select: 'name model price base_price stock_quantity'
         });
 
         res.status(200).json({
             success: true,
             message: 'Stock assigned to super vendor successfully',
+            pricing_summary: {
+                base_price: basePrice,
+                discount_percentage: discount,
+                final_price: finalPrice,
+                quantity: qty,
+                total_value: finalPrice * qty
+            },
             data: superVendor.inventory
         });
     } catch (error) {
