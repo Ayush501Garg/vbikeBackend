@@ -1,0 +1,981 @@
+{
+  "info": {
+    "_postman_id": "vbike-super-admin-vendor",
+    "name": "VBike - Super Admin, Super Vendor & Sub Vendor APIs",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "🏢 Super Vendor - CRUD",
+      "item": [
+        {
+          "name": "Create Super Vendor",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"super_vendor_id\": \"SV-MH-001\",\n  \"company_name\": \"VBike Maharashtra\",\n  \"owner_name\": \"Amit Sharma\",\n  \"phone\": \"+91-9876543210\",\n  \"email\": \"amit@vbike.com\",\n  \"address\": \"123 MG Road\",\n  \"city\": \"Mumbai\",\n  \"state\": \"Maharashtra\",\n  \"pincode\": \"400001\",\n  \"gst_number\": \"27AAAAA0000A1Z5\",\n  \"pan_number\": \"AAAAA0000A\",\n  \"bank_account\": \"1234567890\",\n  \"ifsc_code\": \"HDFC0000123\",\n  \"bank_name\": \"HDFC\",\n  \"longitude\": 72.8777,\n  \"latitude\": 19.0760,\n  \"status\": \"active\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/super-vendors",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "super-vendors"]
+            }
+          }
+        },
+        {
+          "name": "Get All Super Vendors",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8000/api/super-vendors",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "super-vendors"]
+            }
+          }
+        },
+        {
+          "name": "Get Super Vendor By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8000/api/super-vendors/SV_ID",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "super-vendors", "SV_ID"]
+            }
+          }
+        },
+        {
+          "name": "Update Super Vendor",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"+91-9876543211\",\n  \"email\": \"newemail@vbike.com\",\n  \"status\": \"active\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/super-vendors/SV_ID",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "super-vendors", "SV_ID"]
+            }
+          }
+        },
+        {
+          "name": "Delete Super Vendor",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8000/api/super-vendors/SV_ID",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "super-vendors", "SV_ID"]
+            }
+          }
+        },
+        {
+          "name": "Get By State",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8000/api/super-vendors/state/Maharashtra",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "super-vendors", "state", "Maharashtra"]
+            }
+          }
+        },
+        {
+          "name": "Find Nearby (Geo)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8000/api/super-vendors/nearby?lat=19.0760&lng=72.8777&radius=50",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "super-vendors", "nearby"],
+              "query": [
+                {"key": "lat", "value": "19.0760"},
+                {"key": "lng", "value": "72.8777"},
+                {"key": "radius", "value": "50"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Dashboard Stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8000/api/super-vendors/SV_ID/dashboard",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "super-vendors", "SV_ID", "dashboard"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "👥 Super Vendor - Sub Vendor Management",
+      "item": [
+        {
+          "name": "Create Sub Vendor",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"VBike Pune\",\n  \"email\": \"pune@vbike.com\",\n  \"phone\": \"+91-9988776655\",\n  \"address_line\": \"456 FC Road\",\n  \"city\": \"Pune\",\n  \"state\": \"Maharashtra\",\n  \"postal_code\": \"411004\",\n  \"lat\": 18.5204,\n  \"lng\": 73.8567\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/super-vendors/SV_ID/create-sub-vendor",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "super-vendors", "SV_ID", "create-sub-vendor"]
+            }
+          }
+        },
+        {
+          "name": "Assign Existing Sub Vendors",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vendor_ids\": [\"VENDOR_ID_1\", \"VENDOR_ID_2\"]\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/super-vendors/SV_ID/assign-vendors",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "super-vendors", "SV_ID", "assign-vendors"]
+            }
+          }
+        },
+        {
+          "name": "Remove Sub Vendor",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vendor_id\": \"VENDOR_ID\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/super-vendors/SV_ID/remove-vendor",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "super-vendors", "SV_ID", "remove-vendor"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📦 Super Vendor - Inventory & Pricing",
+      "item": [
+        {
+          "name": "Assign Inventory to Super Vendor",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"PRODUCT_ID\",\n  \"quantity\": 50\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/super-vendors/SV_ID/inventory/assign",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "super-vendors", "SV_ID", "inventory", "assign"]
+            }
+          }
+        },
+        {
+          "name": "Get Super Vendor Inventory",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8000/api/super-vendors/SV_ID/inventory",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "super-vendors", "SV_ID", "inventory"]
+            }
+          }
+        },
+        {
+          "name": "Transfer Inventory to Sub Vendor",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"PRODUCT_ID\",\n  \"quantity\": 10\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/super-vendors/SV_ID/sub-vendors/VENDOR_ID/inventory",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "super-vendors", "SV_ID", "sub-vendors", "VENDOR_ID", "inventory"]
+            }
+          }
+        },
+        {
+          "name": "Get Sub Vendor Inventory",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8000/api/super-vendors/SV_ID/sub-vendors/VENDOR_ID/inventory",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "super-vendors", "SV_ID", "sub-vendors", "VENDOR_ID", "inventory"]
+            }
+          }
+        },
+        {
+          "name": "Set Product Pricing",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"discount_percentage\": 8,\n  \"markup_percentage\": 0,\n  \"custom_price\": 78200\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/super-vendors/SV_ID/inventory/PRODUCT_ID/pricing",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "super-vendors", "SV_ID", "inventory", "PRODUCT_ID", "pricing"]
+            }
+          }
+        },
+        {
+          "name": "Update Pricing Rules for Sub Vendors",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"discount_percentage\": 5,\n  \"markup_percentage\": 0,\n  \"can_set_custom_price\": true,\n  \"min_margin_percentage\": 3,\n  \"max_discount_percentage\": 10\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/super-vendors/SV_ID/pricing-rules",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "super-vendors", "SV_ID", "pricing-rules"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "💰 Super Vendor - Sales",
+      "item": [
+        {
+          "name": "Super Vendor Sells Product",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"PRODUCT_ID\",\n  \"quantity\": 3,\n  \"selling_price\": 78200,\n  \"customer_details\": {\n    \"name\": \"Priya Deshmukh\",\n    \"phone\": \"+91-9123456789\"\n  }\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/super-vendors/SV_ID/sell",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "super-vendors", "SV_ID", "sell"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "💳 Super Vendor - Payments & Ledger",
+      "item": [
+        {
+          "name": "Record Payment - Cash",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 500000,\n  \"payment_date\": \"2026-01-21\",\n  \"payment_method\": \"cash\",\n  \"notes\": \"Cash payment received for bikes\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/super-vendors/SV_ID/payments",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "super-vendors", "SV_ID", "payments"]
+            }
+          }
+        },
+        {
+          "name": "Record Payment - Bank Transfer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 2500000,\n  \"payment_date\": \"2026-01-21\",\n  \"payment_method\": \"bank_transfer\",\n  \"payment_reference\": \"NEFT45678912345\",\n  \"utr_number\": \"UTR123456789\",\n  \"notes\": \"NEFT payment for bikes\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/super-vendors/SV_ID/payments",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "super-vendors", "SV_ID", "payments"]
+            }
+          }
+        },
+        {
+          "name": "Record Payment - Cheque",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 1800000,\n  \"payment_date\": \"2026-01-21\",\n  \"payment_method\": \"cheque\",\n  \"cheque_number\": \"CHQ789456\",\n  \"notes\": \"Cheque payment\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/super-vendors/SV_ID/payments",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "super-vendors", "SV_ID", "payments"]
+            }
+          }
+        },
+        {
+          "name": "Get All Ledger Entries",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8000/api/super-vendors/SV_ID/ledger",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "super-vendors", "SV_ID", "ledger"]
+            }
+          }
+        },
+        {
+          "name": "Get Ledger By Date Range",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8000/api/super-vendors/SV_ID/ledger?startDate=2026-01-01&endDate=2026-01-31",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "super-vendors", "SV_ID", "ledger"],
+              "query": [
+                {"key": "startDate", "value": "2026-01-01"},
+                {"key": "endDate", "value": "2026-01-31"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Export Ledger to CSV",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8000/api/super-vendors/SV_ID/ledger/export",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "super-vendors", "SV_ID", "ledger", "export"]
+            }
+          }
+        },
+        {
+          "name": "Get Payment Statistics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8000/api/super-vendors/SV_ID/payment-stats",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "super-vendors", "SV_ID", "payment-stats"]
+            }
+          }
+        },
+        {
+          "name": "Delete Transaction",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8000/api/super-vendors/transactions/TRANSACTION_ID",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "super-vendors", "transactions", "TRANSACTION_ID"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📄 Super Vendor - Invoices",
+      "item": [
+        {
+          "name": "Create Invoice - Simple",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"description\": \"V-Bike Model X\",\n      \"quantity\": 10,\n      \"unit_price\": 50000,\n      \"discount\": 5000,\n      \"tax_rate\": 18\n    }\n  ],\n  \"due_date\": \"2026-02-21\",\n  \"discount\": 10000,\n  \"terms_and_conditions\": \"Payment due within 30 days\",\n  \"notes\": \"Bulk order for January 2026\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/super-vendors/SV_ID/invoices",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "super-vendors", "SV_ID", "invoices"]
+            }
+          }
+        },
+        {
+          "name": "Create Invoice - With Bike Model",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"bike_model\": \"BIKE_MODEL_ID\",\n      \"description\": \"V-Bike Model X\",\n      \"quantity\": 20,\n      \"unit_price\": 50000,\n      \"discount\": 10000,\n      \"tax_rate\": 18\n    }\n  ],\n  \"due_date\": \"2026-02-21\",\n  \"discount\": 5000,\n  \"terms_and_conditions\": \"Payment within 30 days\",\n  \"notes\": \"January bulk order\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/super-vendors/SV_ID/invoices",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "super-vendors", "SV_ID", "invoices"]
+            }
+          }
+        },
+        {
+          "name": "Create Invoice - With Product",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"product\": \"PRODUCT_ID\",\n      \"description\": \"Battery Pack 48V\",\n      \"quantity\": 50,\n      \"unit_price\": 15000,\n      \"discount\": 0,\n      \"tax_rate\": 18\n    }\n  ],\n  \"due_date\": \"2026-02-21\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/super-vendors/SV_ID/invoices",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "super-vendors", "SV_ID", "invoices"]
+            }
+          }
+        },
+        {
+          "name": "Get All Invoices",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8000/api/super-vendors/SV_ID/invoices",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "super-vendors", "SV_ID", "invoices"]
+            }
+          }
+        },
+        {
+          "name": "Get Single Invoice",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8000/api/super-vendors/invoices/INVOICE_ID",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "super-vendors", "invoices", "INVOICE_ID"]
+            }
+          }
+        },
+        {
+          "name": "Update Invoice Status",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"paid\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/super-vendors/invoices/INVOICE_ID/status",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "super-vendors", "invoices", "INVOICE_ID", "status"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🏪 Sub Vendor (Vendor) - Operations",
+      "item": [
+        {
+          "name": "Get Sub Vendor Profile & Inventory",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8000/api/vendors/VENDOR_ID",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "vendors", "VENDOR_ID"]
+            }
+          }
+        },
+        {
+          "name": "Set Product Price",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"PRODUCT_ID\",\n  \"custom_price\": 82000\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/vendors/VENDOR_ID/set-price",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "vendors", "VENDOR_ID", "set-price"]
+            }
+          }
+        },
+        {
+          "name": "Sub Vendor Sells Product",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"PRODUCT_ID\",\n  \"quantity\": 2,\n  \"selling_price\": 82000,\n  \"customer_details\": {\n    \"name\": \"Rahul Patel\",\n    \"phone\": \"+91-9988776655\"\n  }\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/vendors/VENDOR_ID/sell",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "vendors", "VENDOR_ID", "sell"]
+            }
+          }
+        },
+        {
+          "name": "Get Sales History & Inventory",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8000/api/vendors/VENDOR_ID/sales-history",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "vendors", "VENDOR_ID", "sales-history"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🏢 Super Admin - Inventory Management",
+      "item": [
+        {
+          "name": "Get Main Inventory",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8000/api/super-admin/inventory",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "super-admin", "inventory"]
+            }
+          }
+        },
+        {
+          "name": "Add Stock to Main Inventory",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"PRODUCT_ID\",\n  \"quantity\": 100\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/super-admin/inventory/add-stock",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "super-admin", "inventory", "add-stock"]
+            }
+          }
+        },
+        {
+          "name": "Update Product Base Price",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"base_price\": 90000\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/super-admin/products/PRODUCT_ID/base-price",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "super-admin", "products", "PRODUCT_ID", "base-price"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📤 Super Admin - Allocation",
+      "item": [
+        {
+          "name": "Allocate to Super Vendor",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"superVendorId\": \"SV_ID\",\n  \"productId\": \"PRODUCT_ID\",\n  \"quantity\": 50,\n  \"discount_percentage\": 5,\n  \"markup_percentage\": 0\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/super-admin/allocate/super-vendor",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "super-admin", "allocate", "super-vendor"]
+            }
+          }
+        },
+        {
+          "name": "Allocate Directly to Sub Vendor",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vendorId\": \"VENDOR_ID\",\n  \"productId\": \"PRODUCT_ID\",\n  \"quantity\": 20,\n  \"min_price\": 80000,\n  \"max_price\": 90000,\n  \"custom_price\": 85000\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/super-admin/allocate/sub-vendor",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "super-admin", "allocate", "sub-vendor"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "💻 Super Admin - Sales & Reports",
+      "item": [
+        {
+          "name": "Super Admin Sells Product",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"PRODUCT_ID\",\n  \"quantity\": 2,\n  \"selling_price\": 85000,\n  \"customer_details\": {\n    \"name\": \"Rajesh Kumar\",\n    \"phone\": \"+91-9876543210\"\n  }\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/super-admin/sell",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "super-admin", "sell"]
+            }
+          }
+        },
+        {
+          "name": "Get All Vendors Report",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8000/api/super-admin/vendors/all",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "super-admin", "vendors", "all"]
+            }
+          }
+        },
+        {
+          "name": "Get Inventory Distribution Report",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8000/api/super-admin/reports/inventory",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "super-admin", "reports", "inventory"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "👥 Super Admin - Sub Vendor Management",
+      "item": [
+        {
+          "name": "Get All Sub Vendors (with filters)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8000/api/super-admin/sub-vendors?status=active&state=Maharashtra&search=pune",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "super-admin", "sub-vendors"],
+              "query": [
+                {"key": "status", "value": "active"},
+                {"key": "state", "value": "Maharashtra"},
+                {"key": "search", "value": "pune"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Sub Vendor Details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8000/api/super-admin/sub-vendors/VENDOR_ID",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "super-admin", "sub-vendors", "VENDOR_ID"]
+            }
+          }
+        },
+        {
+          "name": "Update Sub Vendor Status",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"active\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/super-admin/sub-vendors/VENDOR_ID/status",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "super-admin", "sub-vendors", "VENDOR_ID", "status"]
+            }
+          }
+        },
+        {
+          "name": "Get Sub Vendor Ledger",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8000/api/super-admin/sub-vendors/VENDOR_ID/ledger?startDate=2025-01-01&endDate=2025-12-31&type=sales",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "super-admin", "sub-vendors", "VENDOR_ID", "ledger"],
+              "query": [
+                {"key": "startDate", "value": "2025-01-01"},
+                {"key": "endDate", "value": "2025-12-31"},
+                {"key": "type", "value": "sales"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Sub Vendor Payments",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8000/api/super-admin/sub-vendors/VENDOR_ID/payments",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "super-admin", "sub-vendors", "VENDOR_ID", "payments"]
+            }
+          }
+        },
+        {
+          "name": "Record Payment from Sub Vendor",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 150000,\n  \"payment_method\": \"bank_transfer\",\n  \"reference_number\": \"TXN20260121001\",\n  \"notes\": \"January settlement\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/super-admin/sub-vendors/VENDOR_ID/record-payment",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "super-admin", "sub-vendors", "VENDOR_ID", "record-payment"]
+            }
+          }
+        },
+        {
+          "name": "Get Sub Vendor Transactions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8000/api/super-admin/sub-vendors/VENDOR_ID/transactions",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "super-admin", "sub-vendors", "VENDOR_ID", "transactions"]
+            }
+          }
+        },
+        {
+          "name": "Get Sub Vendor Invoices",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8000/api/super-admin/sub-vendors/VENDOR_ID/invoices",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "super-admin", "sub-vendors", "VENDOR_ID", "invoices"]
+            }
+          }
+        },
+        {
+          "name": "Get Sub Vendor Performance Report",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8000/api/super-admin/sub-vendors/VENDOR_ID/report",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "super-admin", "sub-vendors", "VENDOR_ID", "report"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

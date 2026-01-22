@@ -9,7 +9,17 @@ const {
     sellProduct,
     getAllVendorsReport,
     getInventoryReport,
-    updateProductBasePrice
+    updateProductBasePrice,
+    getAllSubVendors,
+    getSubVendorDetails,
+    updateSubVendorStatus,
+    getSubVendorLedger,
+    getSubVendorPayments,
+    recordSubVendorPayment,
+    getSubVendorTransactions,
+    getSubVendorInvoices,
+    getSubVendorsByState,
+    getSubVendorReport
 } = require('../controllers/superAdminController');
 
 const { protect, authorize } = require('../middlewares/authMiddleware');
@@ -51,5 +61,37 @@ router.get('/reports/inventory', getInventoryReport);
 
 // Update product base price
 router.put('/products/:id/base-price', updateProductBasePrice);
+
+// ===== SUB VENDOR MANAGEMENT =====
+
+// Get all sub vendors
+router.get('/sub-vendors', getAllSubVendors);
+
+// Get sub vendors by state
+router.get('/sub-vendors/state/:state', getSubVendorsByState);
+
+// Get detailed sub vendor info
+router.get('/sub-vendors/:id', getSubVendorDetails);
+
+// Update sub vendor status
+router.put('/sub-vendors/:id/status', updateSubVendorStatus);
+
+// Get sub vendor account ledger
+router.get('/sub-vendors/:id/ledger', getSubVendorLedger);
+
+// Get sub vendor payment history
+router.get('/sub-vendors/:id/payments', getSubVendorPayments);
+
+// Record payment from sub vendor
+router.post('/sub-vendors/:id/record-payment', recordSubVendorPayment);
+
+// Get sub vendor transaction history
+router.get('/sub-vendors/:id/transactions', getSubVendorTransactions);
+
+// Get sub vendor invoice history
+router.get('/sub-vendors/:id/invoices', getSubVendorInvoices);
+
+// Get sub vendor performance report
+router.get('/sub-vendors/:id/report', getSubVendorReport);
 
 module.exports = router;

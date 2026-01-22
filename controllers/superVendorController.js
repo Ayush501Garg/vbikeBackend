@@ -438,8 +438,12 @@ exports.assignInventoryToSuperVendor = async (req, res) => {
             });
         }
 
-        product.stock_quantity -= qty;
-        await product.save();
+        // Decrement warehouse stock without triggering full product validation
+        await Product.updateOne(
+            { _id: productId },
+            { $inc: { stock_quantity: -qty } },
+            { runValidators: false }
+        );
 
         const existing = superVendor.inventory.find(item => item.product?.toString() === productId);
         if (existing) {

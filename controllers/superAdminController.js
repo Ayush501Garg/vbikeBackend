@@ -413,3 +413,549 @@ exports.updateProductBasePrice = async (req, res) => {
         });
     }
 };
+
+// ========================================
+// SUB VENDOR MANAGEMENT (Super Admin)
+// ========================================
+
+// @desc    Get all sub vendors with detailed info
+// @route   GET /api/super-admin/sub-vendors
+// @access  Super Admin
+exports.getAllSubVendors = async (req, res) => {
+    try {
+        const { status, state, search } = req.query;
+        let query = { vendor_type: 'sub_vendor' };
+
+        if (status) query.status = status;
+        if (state) query.state = state;
+        if (search) {
+            query.$or = [
+                { name: { $regex: search, $options: 'i' } },
+                { email: { $regex: search, $options: 'i' } },
+                { phone: { $regex: search, $options: 'i' } }
+            ];
+        }
+
+        const subVendors = await Vendor.find(query)
+            .populate('super_vendor', 'company_name state')
+            .populate({ path: 'inventory.product', select: 'name model base_price' })
+            .sort('-createdAt');
+
+        res.status(200).json({
+            success: true,
+            count: subVendors.length,
+            data: subVendors
+        });
+    } catch (error) {
+        console.error('Error fetching sub vendors:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Server error fetching sub vendors'
+        });
+    }
+};
+
+// @desc    Get detailed sub vendor info with ledger and sales
+// @route   GET /api/super-admin/sub-vendors/:id
+// @access  Super Admin
+exports.getSubVendorDetails = async (req, res) => {
+    try {
+        const subVendor = await Vendor.findById(req.params.id)
+            .populate('super_vendor', 'company_name state')
+            .populate({ path: 'inventory.product', select: 'name model base_price price' });
+
+        if (!subVendor) {
+            return res.status(404).json({ success: false, message: 'Sub Vendor not found' });
+        }
+
+        // Calculate inventory value and metrics
+        let inventoryValue = 0;
+        let totalAssignedStock = 0;
+        let totalAvailableStock = 0;
+        let totalSoldStock = 0;
+
+        subVendor.inventory.forEach(item => {
+            totalAssignedStock += item.assigned_stock;
+            totalAvailableStock += item.available_stock;
+            totalSoldStock += item.sold_stock;
+            if (item.product) {
+                inventoryValue += (item.product.price * item.available_stock);
+            }
+        });
+
+        res.status(200).json({
+            success: true,
+            data: {
+                vendor_info: {
+                    _id: subVendor._id,
+                    name: subVendor.name,
+                    email: subVendor.email,
+                    phone: subVendor.phone,
+                    address: subVendor.address_line,
+                    city: subVendor.city,
+                    state: subVendor.state,
+                    postal_code: subVendor.postal_code,
+                    super_vendor: subVendor.super_vendor,
+                    status: subVendor.status,
+                    createdAt: subVendor.createdAt,
+                    updatedAt: subVendor.updatedAt
+                },
+                inventory: {
+                    total_assigned_stock: totalAssignedStock,
+                    total_available_stock: totalAvailableStock,
+                    total_sold_stock: totalSoldStock,
+                    inventory_value: inventoryValue,
+                    products: subVendor.inventory
+                },
+                business_metrics: {
+                    total_business: subVendor.total_business,
+                    total_bikes_sold: subVendor.total_bikes_sold,
+                    pending_amount: subVendor.pending_amount,
+                    rating: subVendor.rating
+                }
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching sub vendor details:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Server error fetching details'
+        });
+    }
+};
+
+// @desc    Update sub vendor status (active, inactive, suspended)
+// @route   PUT /api/super-admin/sub-vendors/:id/status
+// @access  Super Admin
+exports.updateSubVendorStatus = async (req, res) => {
+    try {
+        const { status } = req.body;
+
+        if (!['active', 'inactive', 'suspended'].includes(status)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid status. Must be: active, inactive, or suspended'
+            });
+        }
+
+        const subVendor = await Vendor.findByIdAndUpdate(
+            req.params.id,
+            { status },
+            { new: true, runValidators: true }
+        );
+
+        if (!subVendor) {
+            return res.status(404).json({ success: false, message: 'Sub Vendor not found' });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: `Sub Vendor status updated to ${status}`,
+            data: subVendor
+        });
+    } catch (error) {
+        console.error('Error updating sub vendor status:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Server error updating status'
+        });
+    }
+};
+
+// @desc    Get sub vendor account ledger (all transactions)
+// @route   GET /api/super-admin/sub-vendors/:id/ledger
+// @access  Super Admin
+exports.getSubVendorLedger = async (req, res) => {
+    try {
+        const { startDate, endDate, type } = req.query;
+        let query = { vendor_id: req.params.id };
+
+        if (startDate || endDate) {
+            query.createdAt = {};
+            if (startDate) query.createdAt.$gte = new Date(startDate);
+            if (endDate) query.createdAt.$lte = new Date(endDate);
+        }
+
+        if (type) query.type = type; // sale, purchase, payment, credit, etc.
+
+        // Get vendor info
+        const vendor = await Vendor.findById(req.params.id);
+        if (!vendor) {
+            return res.status(404).json({ success: false, message: 'Vendor not found' });
+        }
+
+        // Create ledger entries from inventory sales
+        const ledgerEntries = [];
+
+        // Business entries
+        ledgerEntries.push({
+            date: vendor.createdAt,
+            type: 'account_created',
+            description: 'Account Created',
+            debit: 0,
+            credit: 0,
+            balance: 0
+        });
+
+        // Add sales records (if tracked separately)
+        if (vendor.total_bikes_sold > 0) {
+            ledgerEntries.push({
+                date: vendor.updatedAt,
+                type: 'sales',
+                description: `Total Sales: ${vendor.total_bikes_sold} bikes`,
+                debit: vendor.total_business,
+                credit: 0,
+                balance: vendor.total_business - vendor.pending_amount
+            });
+        }
+
+        // Add pending payments
+        if (vendor.pending_amount > 0) {
+            ledgerEntries.push({
+                date: vendor.updatedAt,
+                type: 'pending_payment',
+                description: 'Pending Payment Amount',
+                debit: 0,
+                credit: vendor.pending_amount,
+                balance: vendor.total_business - vendor.pending_amount
+            });
+        }
+
+        const totalDebit = ledgerEntries.reduce((sum, entry) => sum + entry.debit, 0);
+        const totalCredit = ledgerEntries.reduce((sum, entry) => sum + entry.credit, 0);
+
+        res.status(200).json({
+            success: true,
+            vendor: { name: vendor.name, id: vendor._id },
+            summary: {
+                total_business: vendor.total_business,
+                total_bikes_sold: vendor.total_bikes_sold,
+                pending_amount: vendor.pending_amount,
+                received_amount: vendor.total_business - vendor.pending_amount,
+                total_debit: totalDebit,
+                total_credit: totalCredit
+            },
+            ledger: ledgerEntries.sort((a, b) => new Date(b.date) - new Date(a.date))
+        });
+    } catch (error) {
+        console.error('Error fetching sub vendor ledger:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Server error fetching ledger'
+        });
+    }
+};
+
+// @desc    Get sub vendor payment history
+// @route   GET /api/super-admin/sub-vendors/:id/payments
+// @access  Super Admin
+exports.getSubVendorPayments = async (req, res) => {
+    try {
+        const { status, startDate, endDate } = req.query;
+
+        const vendor = await Vendor.findById(req.params.id);
+        if (!vendor) {
+            return res.status(404).json({ success: false, message: 'Vendor not found' });
+        }
+
+        // Create payment records based on vendor metrics
+        const payments = [
+            {
+                _id: `${vendor._id}-sales`,
+                vendor_id: vendor._id,
+                type: 'sales',
+                amount: vendor.total_business,
+                status: vendor.pending_amount > 0 ? 'partial' : 'completed',
+                description: `Total Sales (${vendor.total_bikes_sold} bikes)`,
+                date: vendor.updatedAt,
+                payment_method: 'not_applicable'
+            }
+        ];
+
+        if (vendor.pending_amount > 0) {
+            payments.push({
+                _id: `${vendor._id}-pending`,
+                vendor_id: vendor._id,
+                type: 'pending',
+                amount: vendor.pending_amount,
+                status: 'pending',
+                description: 'Outstanding Payment',
+                date: vendor.updatedAt,
+                payment_method: 'not_applicable'
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            vendor: { name: vendor.name, id: vendor._id },
+            summary: {
+                total_transactions: payments.length,
+                total_amount: payments.reduce((sum, p) => sum + p.amount, 0),
+                pending_amount: vendor.pending_amount,
+                completed_amount: vendor.total_business - vendor.pending_amount
+            },
+            payments: payments.sort((a, b) => new Date(b.date) - new Date(a.date))
+        });
+    } catch (error) {
+        console.error('Error fetching sub vendor payments:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Server error fetching payments'
+        });
+    }
+};
+
+// @desc    Record payment received from sub vendor
+// @route   POST /api/super-admin/sub-vendors/:id/record-payment
+// @access  Super Admin
+exports.recordSubVendorPayment = async (req, res) => {
+    try {
+        const { amount, payment_method, reference_number, notes } = req.body;
+        const paymentAmount = Number(amount);
+
+        if (!paymentAmount || paymentAmount <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Valid payment amount is required'
+            });
+        }
+
+        const vendor = await Vendor.findById(req.params.id);
+        if (!vendor) {
+            return res.status(404).json({ success: false, message: 'Vendor not found' });
+        }
+
+        if (paymentAmount > vendor.pending_amount) {
+            return res.status(400).json({
+                success: false,
+                message: `Payment cannot exceed pending amount: ${vendor.pending_amount}`
+            });
+        }
+
+        // Update pending amount
+        vendor.pending_amount -= paymentAmount;
+        await vendor.save();
+
+        res.status(200).json({
+            success: true,
+            message: 'Payment recorded successfully',
+            data: {
+                vendor: vendor.name,
+                payment_amount: paymentAmount,
+                payment_method,
+                reference_number,
+                remaining_pending: vendor.pending_amount,
+                total_business: vendor.total_business,
+                notes
+            }
+        });
+    } catch (error) {
+        console.error('Error recording payment:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Server error recording payment'
+        });
+    }
+};
+
+// @desc    Get sub vendor sales/transactions history
+// @route   GET /api/super-admin/sub-vendors/:id/transactions
+// @access  Super Admin
+exports.getSubVendorTransactions = async (req, res) => {
+    try {
+        const vendor = await Vendor.findById(req.params.id)
+            .populate({ path: 'inventory.product', select: 'name model base_price price' });
+
+        if (!vendor) {
+            return res.status(404).json({ success: false, message: 'Vendor not found' });
+        }
+
+        // Create transaction records from inventory
+        const transactions = vendor.inventory.map(item => ({
+            product: item.product?.name || 'Unknown Product',
+            product_model: item.product?.model || 'N/A',
+            assigned_stock: item.assigned_stock,
+            sold_stock: item.sold_stock,
+            available_stock: item.available_stock,
+            base_price: item.product?.base_price || 0,
+            custom_price: item.custom_price || item.product?.price || 0,
+            estimated_value: item.available_stock * (item.custom_price || item.product?.price || 0),
+            sale_value: item.sold_stock * (item.custom_price || item.product?.price || 0)
+        }));
+
+        const totalValue = transactions.reduce((sum, t) => sum + t.estimated_value, 0);
+        const totalSalesValue = transactions.reduce((sum, t) => sum + t.sale_value, 0);
+
+        res.status(200).json({
+            success: true,
+            vendor: { name: vendor.name, id: vendor._id },
+            summary: {
+                total_products: transactions.length,
+                total_assigned_stock: vendor.inventory.reduce((sum, i) => sum + i.assigned_stock, 0),
+                total_sold_stock: vendor.inventory.reduce((sum, i) => sum + i.sold_stock, 0),
+                total_available_stock: vendor.inventory.reduce((sum, i) => sum + i.available_stock, 0),
+                total_inventory_value: totalValue,
+                total_sales_value: totalSalesValue
+            },
+            transactions: transactions
+        });
+    } catch (error) {
+        console.error('Error fetching transactions:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Server error fetching transactions'
+        });
+    }
+};
+
+// @desc    Get sub vendor invoice history (if invoices are tracked)
+// @route   GET /api/super-admin/sub-vendors/:id/invoices
+// @access  Super Admin
+exports.getSubVendorInvoices = async (req, res) => {
+    try {
+        const vendor = await Vendor.findById(req.params.id);
+        if (!vendor) {
+            return res.status(404).json({ success: false, message: 'Vendor not found' });
+        }
+
+        // Generate invoice records based on sales data
+        const invoices = [];
+
+        // Create a summary invoice for total business
+        if (vendor.total_business > 0) {
+            invoices.push({
+                invoice_id: `INV-${vendor._id.toString().slice(-8)}-001`,
+                vendor_name: vendor.name,
+                vendor_id: vendor._id,
+                date: vendor.createdAt,
+                period: 'All Time',
+                total_items: vendor.total_bikes_sold,
+                total_amount: vendor.total_business,
+                paid_amount: vendor.total_business - vendor.pending_amount,
+                pending_amount: vendor.pending_amount,
+                status: vendor.pending_amount > 0 ? 'partially_paid' : 'paid',
+                description: `Total business from ${vendor.total_bikes_sold} bike sales`
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            vendor: { name: vendor.name, id: vendor._id },
+            summary: {
+                total_invoices: invoices.length,
+                total_amount: vendor.total_business,
+                paid_amount: vendor.total_business - vendor.pending_amount,
+                pending_amount: vendor.pending_amount
+            },
+            invoices: invoices
+        });
+    } catch (error) {
+        console.error('Error fetching invoices:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Server error fetching invoices'
+        });
+    }
+};
+
+// @desc    Get sub vendors by state/region
+// @route   GET /api/super-admin/sub-vendors/state/:state
+// @access  Super Admin
+exports.getSubVendorsByState = async (req, res) => {
+    try {
+        const { state } = req.params;
+
+        const subVendors = await Vendor.find({ 
+            state: state,
+            vendor_type: 'sub_vendor'
+        })
+            .populate('super_vendor', 'company_name')
+            .select('name email phone city state total_business total_bikes_sold status');
+
+        res.status(200).json({
+            success: true,
+            state: state,
+            count: subVendors.length,
+            data: subVendors
+        });
+    } catch (error) {
+        console.error('Error fetching sub vendors by state:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Server error fetching sub vendors'
+        });
+    }
+};
+
+// @desc    Get sub vendor performance report
+// @route   GET /api/super-admin/sub-vendors/:id/report
+// @access  Super Admin
+exports.getSubVendorReport = async (req, res) => {
+    try {
+        const vendor = await Vendor.findById(req.params.id)
+            .populate('super_vendor', 'company_name state')
+            .populate({ path: 'inventory.product', select: 'name model base_price price' });
+
+        if (!vendor) {
+            return res.status(404).json({ success: false, message: 'Vendor not found' });
+        }
+
+        // Calculate performance metrics
+        let bestSellingProduct = null;
+        let maxSales = 0;
+
+        vendor.inventory.forEach(item => {
+            if (item.sold_stock > maxSales) {
+                maxSales = item.sold_stock;
+                bestSellingProduct = item.product?.name;
+            }
+        });
+
+        const turnoverRate = vendor.total_business > 0 
+            ? ((vendor.total_bikes_sold / vendor.total_business) * 100).toFixed(2)
+            : 0;
+
+        res.status(200).json({
+            success: true,
+            report: {
+                vendor_info: {
+                    name: vendor.name,
+                    email: vendor.email,
+                    phone: vendor.phone,
+                    city: vendor.city,
+                    state: vendor.state,
+                    super_vendor: vendor.super_vendor?.company_name || 'Direct',
+                    status: vendor.status
+                },
+                performance: {
+                    total_bikes_sold: vendor.total_bikes_sold,
+                    total_business: vendor.total_business,
+                    average_per_sale: vendor.total_bikes_sold > 0 
+                        ? (vendor.total_business / vendor.total_bikes_sold).toFixed(2)
+                        : 0,
+                    pending_amount: vendor.pending_amount,
+                    received_amount: vendor.total_business - vendor.pending_amount,
+                    payment_completion_rate: vendor.total_business > 0
+                        ? (((vendor.total_business - vendor.pending_amount) / vendor.total_business) * 100).toFixed(2)
+                        : 0
+                },
+                inventory: {
+                    total_products: vendor.inventory.length,
+                    total_assigned: vendor.inventory.reduce((sum, i) => sum + i.assigned_stock, 0),
+                    total_sold: vendor.inventory.reduce((sum, i) => sum + i.sold_stock, 0),
+                    total_available: vendor.inventory.reduce((sum, i) => sum + i.available_stock, 0),
+                    best_selling_product: bestSellingProduct,
+                    best_selling_quantity: maxSales
+                },
+                rating: vendor.rating || 0
+            }
+        });
+    } catch (error) {
+        console.error('Error generating report:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Server error generating report'
+        });
+    }
+};
+
