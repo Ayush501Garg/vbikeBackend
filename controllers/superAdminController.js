@@ -54,15 +54,20 @@ exports.addStockToMainInventory = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Product not found' });
         }
 
-        product.stock_quantity += qty;
-        await product.save();
+        const newStock = product.stock_quantity + qty;
+        // Avoid full validation on legacy products missing base_price
+        await Product.updateOne(
+            { _id: productId },
+            { $inc: { stock_quantity: qty } },
+            { runValidators: false }
+        );
 
         res.status(200).json({
             success: true,
             message: `Added ${qty} units to main inventory`,
             data: {
                 product: product.name,
-                new_stock: product.stock_quantity
+                new_stock: newStock
             }
         });
     } catch (error) {
@@ -106,9 +111,13 @@ exports.allocateToSuperVendor = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Super Vendor not found' });
         }
 
-        // Deduct from main inventory
-        product.stock_quantity -= qty;
-        await product.save();
+        // Deduct from main inventory without triggering product validation
+        const remainingStock = product.stock_quantity - qty;
+        await Product.updateOne(
+            { _id: productId },
+            { $inc: { stock_quantity: -qty } },
+            { runValidators: false }
+        );
 
         // Add to super vendor inventory
         const existing = superVendor.inventory.find(item => item.product?.toString() === productId);
@@ -134,7 +143,7 @@ exports.allocateToSuperVendor = async (req, res) => {
         res.status(200).json({
             success: true,
             message: `Allocated ${qty} units to Super Vendor successfully`,
-            remaining_main_stock: product.stock_quantity,
+            remaining_main_stock: remainingStock,
             super_vendor_inventory: superVendor.inventory
         });
     } catch (error) {
@@ -178,9 +187,15 @@ exports.allocateToSubVendor = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Vendor not found' });
         }
 
-        // Deduct from main inventory
-        product.stock_quantity -= qty;
-        await product.save();
+        const basePrice = product.base_price || product.price || 0;
+
+        // Deduct from main inventory without triggering product validation
+        const remainingStock = product.stock_quantity - qty;
+        await Product.updateOne(
+            { _id: productId },
+            { $inc: { stock_quantity: -qty } },
+            { runValidators: false }
+        );
 
         // Add to sub vendor inventory
         const existing = vendor.inventory.find(item => item.product?.toString() === productId);
@@ -196,8 +211,8 @@ exports.allocateToSubVendor = async (req, res) => {
                 assigned_stock: qty,
                 sold_stock: 0,
                 available_stock: qty,
-                min_price: min_price || product.base_price * 0.9,
-                max_price: max_price || product.base_price * 1.1,
+                min_price: min_price ?? basePrice * 0.9,
+                max_price: max_price ?? basePrice * 1.1,
                 custom_price: custom_price
             });
         }
@@ -211,7 +226,7 @@ exports.allocateToSubVendor = async (req, res) => {
         res.status(200).json({
             success: true,
             message: `Allocated ${qty} units to Sub Vendor directly`,
-            remaining_main_stock: product.stock_quantity,
+            remaining_main_stock: remainingStock,
             sub_vendor_inventory: vendor.inventory
         });
     } catch (error) {
@@ -250,9 +265,13 @@ exports.sellProduct = async (req, res) => {
             });
         }
 
-        // Deduct from main inventory
-        product.stock_quantity -= qty;
-        await product.save();
+        // Deduct from main inventory without triggering product validation
+        const remainingStock = product.stock_quantity - qty;
+        await Product.updateOne(
+            { _id: productId },
+            { $inc: { stock_quantity: -qty } },
+            { runValidators: false }
+        );
 
         // Here you can create an order record if needed
         const saleAmount = (selling_price || product.price) * qty;
@@ -265,7 +284,7 @@ exports.sellProduct = async (req, res) => {
                 quantity: qty,
                 price_per_unit: selling_price || product.price,
                 total_amount: saleAmount,
-                remaining_stock: product.stock_quantity,
+                remaining_stock: remainingStock,
                 customer: customer_details
             }
         });
